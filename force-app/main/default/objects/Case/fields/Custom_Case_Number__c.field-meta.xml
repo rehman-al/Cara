@@ -2,7 +2,14 @@
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Custom_Case_Number__c</fullName>
     <externalId>false</externalId>
-    <formula>Category_Prefix__c &amp; TEXT(Category_Sequence__c)</formula>
+    <description>Case number prefixed according to the Case record type.</description>
+    <formula>CASE(
+    RecordType.DeveloperName,
+    &quot;General_Enquiry&quot;, &quot;GE_&quot;,
+    &quot;Compliance&quot;, &quot;COMP_&quot;,
+    &quot;Sales_Follow_up&quot;, &quot;SALES_&quot;,
+    &quot;&quot;
+) &amp; CaseNumber</formula>
     <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
     <label>Custom Case Number</label>
     <required>false</required>
