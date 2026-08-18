@@ -10,6 +10,11 @@
         <name>ApexEmailNotifications</name>
     </types>
     <types>
+        <members>CaseCustomProductController</members>
+        <members>CaseCustomProductControllerTest</members>
+        <name>ApexClass</name>
+    </types>
+    <types>
         <members>NonEssentialsMobileLanding</members>
         <name>ApexPage</name>
     </types>
@@ -512,6 +517,7 @@
         <members>CaseContactRole</members>
         <members>CaseMilestone</members>
         <members>CaseRelatedIssue</members>
+        <members>Custom_Product_Request__c</members>
         <members>ChangeRequest</members>
         <members>ChangeRequestRelatedIssue</members>
         <members>ChangeRequestRelatedItem</members>
@@ -1022,6 +1028,7 @@
         <members>CaseClose-Close Case Layout</members>
         <members>CaseInteraction-Case Feed Layout</members>
         <members>CaseMilestone-Case Milestone Layout</members>
+        <members>Custom_Product_Request__c-Custom Product Request Layout</members>
         <members>ChangeRequest-Change Request Layout</members>
         <members>CollaborationGroup-Group Layout</members>
         <members>Contact-Contact Layout</members>
@@ -1135,6 +1142,10 @@
         <members>WorkStepTemplate-Work Step Template Layout</members>
         <members>WorkThanks-Thanks Layout</members>
         <name>Layout</name>
+    </types>
+    <types>
+        <members>caseCustomProductManager</members>
+        <name>LightningComponentBundle</name>
     </types>
     <types>
         <members>Account.AllAccounts</members>

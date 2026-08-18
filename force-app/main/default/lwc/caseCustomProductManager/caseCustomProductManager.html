@@ -1,0 +1,303 @@
+<template>
+    <div class="product-shell">
+        <div class="product-header">
+            <div class="product-header-left">
+                <div class="product-icon">
+                    <lightning-icon icon-name="standard:product" size="small"></lightning-icon>
+                </div>
+                <div class="product-title">Custom Product Requests</div>
+            </div>
+
+            <lightning-button
+                class="primary-button"
+                label="Add Request"
+                variant="brand"
+                onclick={handleAdd}
+            ></lightning-button>
+        </div>
+
+        <div class="slds-var-p-around_medium">
+            <template lwc:if={isLoading}>
+                <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+            </template>
+
+            <template lwc:if={hasRequests}>
+                <div class="product-table">
+                    <lightning-datatable
+                        key-field="Id"
+                        data={requests}
+                        columns={requestColumns}
+                        hide-checkbox-column
+                        onrowaction={handleRequestAction}
+                    ></lightning-datatable>
+                </div>
+            </template>
+            <template lwc:else>
+                <div class="empty-state">
+                    No custom product requests have been added to this Case yet.
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <template lwc:if={isModalOpen}>
+        <section
+            role="dialog"
+            tabindex="-1"
+            aria-modal="true"
+            aria-labelledby="request-modal-heading"
+            class="slds-modal slds-fade-in-open slds-modal_large product-modal"
+        >
+            <div class="slds-modal__container">
+                <header class="slds-modal__header product-modal-header">
+                    <lightning-button-icon
+                        class="slds-modal__close"
+                        icon-name="utility:close"
+                        variant="bare-inverse"
+                        alternative-text="Close"
+                        onclick={closeModal}
+                    ></lightning-button-icon>
+                    <h2 id="request-modal-heading" class="slds-text-heading_medium">{modalTitle}</h2>
+                </header>
+
+                <div class="slds-modal__content slds-var-p-around_medium">
+                    <div class="slds-grid slds-wrap slds-gutters">
+                        <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-2">
+                            <lightning-input
+                                data-form-field
+                                name="Product_Name__c"
+                                label="Product Name"
+                                value={draft.Product_Name__c}
+                                required
+                                maxlength="255"
+                                onchange={handleFieldChange}
+                            ></lightning-input>
+                            <lightning-combobox
+                                data-form-field
+                                name="Category__c"
+                                label="Category"
+                                value={draft.Category__c}
+                                options={categoryOptions}
+                                onchange={handleFieldChange}
+                            ></lightning-combobox>
+                            <lightning-input
+                                data-form-field
+                                name="Quantity__c"
+                                type="number"
+                                label="Quantity"
+                                value={draft.Quantity__c}
+                                required
+                                min="0.01"
+                                step="0.01"
+                                message-when-range-underflow="Quantity must be greater than zero."
+                                onchange={handleFieldChange}
+                            ></lightning-input>
+                            <lightning-input
+                                data-form-field
+                                name="Dimensions__c"
+                                label="Dimensions"
+                                value={draft.Dimensions__c}
+                                maxlength="255"
+                                onchange={handleFieldChange}
+                            ></lightning-input>
+                            <lightning-record-picker
+                                data-form-field
+                                label="Existing Product"
+                                placeholder="Search Products"
+                                object-api-name="Product2"
+                                value={draft.Product__c}
+                                onchange={handleProductChange}
+                            ></lightning-record-picker>
+                        </div>
+
+                        <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-2">
+                            <lightning-combobox
+                                data-form-field
+                                name="Status__c"
+                                label="Status"
+                                value={draft.Status__c}
+                                options={statusOptions}
+                                required
+                                onchange={handleFieldChange}
+                            ></lightning-combobox>
+                            <lightning-input
+                                data-form-field
+                                name="Estimated_Cost__c"
+                                type="number"
+                                formatter="currency"
+                                label="Estimated Cost"
+                                value={draft.Estimated_Cost__c}
+                                min="0"
+                                step="0.01"
+                                message-when-range-underflow="Estimated Cost cannot be negative."
+                                onchange={handleFieldChange}
+                            ></lightning-input>
+                            <lightning-input
+                                data-form-field
+                                name="Selling_Price__c"
+                                type="number"
+                                formatter="currency"
+                                label="Selling Price"
+                                value={draft.Selling_Price__c}
+                                min="0"
+                                step="0.01"
+                                message-when-range-underflow="Selling Price cannot be negative."
+                                onchange={handleFieldChange}
+                            ></lightning-input>
+                            <lightning-textarea
+                                data-form-field
+                                name="Description__c"
+                                label="Description"
+                                value={draft.Description__c}
+                                onchange={handleFieldChange}
+                            ></lightning-textarea>
+                            <lightning-textarea
+                                data-form-field
+                                name="Requested_Specification__c"
+                                label="Requested Specification"
+                                value={draft.Requested_Specification__c}
+                                onchange={handleFieldChange}
+                            ></lightning-textarea>
+
+
+                        </div>
+                    </div>
+                </div>
+
+                <footer class="slds-modal__footer">
+                    <lightning-button label="Cancel" onclick={closeModal}></lightning-button>
+                    <lightning-button
+                        class="slds-var-m-left_small"
+                        label="Save"
+                        variant="brand"
+                        disabled={isSaving}
+                        onclick={handleSave}
+                    ></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+    </template>
+
+    <template lwc:if={isAttachmentModalOpen}>
+        <section
+            role="dialog"
+            tabindex="-1"
+            aria-modal="true"
+            class="slds-modal slds-fade-in-open"
+        >
+            <div class="slds-modal__container">
+                <header class="slds-modal__header product-modal-header">
+                    <lightning-button-icon
+                        class="slds-modal__close"
+                        icon-name="utility:close"
+                        variant="bare-inverse"
+                        alternative-text="Close"
+                        onclick={closeAttachmentModal}
+                    ></lightning-button-icon>
+                    <h2 class="slds-text-heading_medium">{selectedProductName} Files</h2>
+                </header>
+
+                <div class="slds-modal__content slds-var-p-around_medium">
+                    <div class="slds-var-m-bottom_medium">
+                        <h3 class="slds-text-heading_small slds-var-m-bottom_small">Upload</h3>
+                        <lightning-file-upload
+                            label="Upload Product Image or File"
+                            record-id={selectedRequestId}
+                            onuploadfinished={handleUploadFinished}
+                            multiple
+                        ></lightning-file-upload>
+                    </div>
+
+                    <template lwc:if={requestFilesLoading}>
+                        <lightning-spinner alternative-text="Loading attachments" size="small"></lightning-spinner>
+                    </template>
+                    <template lwc:else>
+                        <h3 class="slds-text-heading_small slds-var-m-bottom_small">Files</h3>
+                        <template lwc:if={hasRequestFiles}>
+                            <div class="attachments-list">
+                                <template for:each={requestFiles} for:item="file">
+                                    <div key={file.contentDocumentId} class="attachment-item">
+                                        <div class="attachment-meta">
+                                            <template lwc:if={file.isImage}>
+                                                <img class="attachment-thumb" src={file.previewUrl} alt={file.fileName} />
+                                            </template>
+                                            <template lwc:else>
+                                                <div class="attachment-thumb attachment-thumb-placeholder">
+                                                    <lightning-icon icon-name="doctype:unknown" size="small"></lightning-icon>
+                                                </div>
+                                            </template>
+                                            <span>{file.fileName}</span>
+                                        </div>
+                                        <lightning-button
+                                            label="Preview"
+                                            variant="brand"
+                                            data-file={file.contentDocumentId}
+                                            onclick={openAttachmentPreview}
+                                        ></lightning-button>
+                                    </div>
+                                </template>
+                            </div>
+                        </template>
+                        <template lwc:else>
+                            <div class="empty-state">No files attached to this product yet.</div>
+                        </template>
+                    </template>
+                </div>
+
+                <footer class="slds-modal__footer">
+                    <lightning-button label="Generate Quote" variant="brand" onclick={generateQuote}></lightning-button>
+                    <lightning-button label="Close" onclick={closeAttachmentModal}></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+    </template>
+
+    <template lwc:if={selectedPreviewFile}>
+        <section role="dialog" tabindex="-1" aria-modal="true" class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header product-modal-header">
+                    <lightning-button-icon
+                        class="slds-modal__close"
+                        icon-name="utility:close"
+                        variant="bare-inverse"
+                        alternative-text="Close"
+                        onclick={closeAttachmentPreview}
+                    ></lightning-button-icon>
+                    <div class="preview-header">
+                        <div class="preview-file-name">{selectedPreviewFile.fileName}</div>
+                        <span class="preview-file-badge">Preview</span>
+                    </div>
+                </header>
+                <div class="slds-modal__content slds-var-p-around_medium">
+                    <div class="preview-window">
+                        <template lwc:if={isPreviewPdf}>
+                            <iframe 
+                                class="pdf-preview-iframe"
+                                src={selectedPreviewFile.previewUrl}
+                                title={selectedPreviewFile.fileName}
+                            ></iframe>
+                        </template>
+                        <template lwc:elseif={selectedPreviewFile.isImage}>
+                            <img src={selectedPreviewFile.previewUrl} alt={selectedPreviewFile.fileName} />
+                        </template>
+                        <template lwc:else>
+                            <div class="preview-file-placeholder">
+                                <lightning-icon icon-name="doctype:unknown" size="large"></lightning-icon>
+                                <div class="preview-file-placeholder-label">{selectedPreviewFile.fileName}</div>
+                                <p class="preview-file-fallback-text">
+                                    This file type cannot be previewed in the browser.
+                                </p>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button label="Close" onclick={closeAttachmentPreview}></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+    </template>
+</template>
