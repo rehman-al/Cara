@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Package xmlns="http://soap.sforce.com/2006/04/metadata">
     <types>
+        <members>CARAOrderPayload</members>
+        <members>CARAOrderRestService</members>
+        <members>CARAOrderRestServiceTest</members>
         <members>CaseCustomProductController</members>
         <members>CaseCustomProductControllerTest</members>
         <name>ApexClass</name>
@@ -285,6 +288,7 @@
         <members>Order.ContractId</members>
         <members>Order.ContractName</members>
         <members>Order.Created_By_Context__c</members>
+        <members>Order.CurrencyIsoCode__c</members>
         <members>Order.CustomerAuthorizedById</members>
         <members>Order.CustomerAuthorizedDate</members>
         <members>Order.Customer_Name_Plain__c</members>
@@ -297,6 +301,7 @@
         <members>Order.Name</members>
         <members>Order.OpportunityId</members>
         <members>Order.OrderReferenceNumber</members>
+        <members>Order.OrderSource__c</members>
         <members>Order.OriginalOrderId</members>
         <members>Order.OwnerId</members>
         <members>Order.Payment_Status__c</members>
@@ -345,6 +350,9 @@
         <members>Payment.CancellationGatewayRefNumber</members>
         <members>Payment.CancellationGatewayResultCode</members>
         <members>Payment.CancellationSfResultCode</members>
+        <members>Payment.Card_Expiration_Year__c</members>
+        <members>Payment.Card_Last_Four_Digits__c</members>
+        <members>Payment.Card_Type__c</members>
         <members>Payment.Comments</members>
         <members>Payment.Date</members>
         <members>Payment.EffectiveDate</members>
@@ -357,6 +365,7 @@
         <members>Payment.ImpactAmount</members>
         <members>Payment.IpAddress</members>
         <members>Payment.MacAddress</members>
+        <members>Payment.Masked_Card_Number__c</members>
         <members>Payment.NetApplied</members>
         <members>Payment.NetPaymentCreditApplied</members>
         <members>Payment.NetRefundApplied</members>
@@ -364,6 +373,7 @@
         <members>Payment.PaymentGatewayId</members>
         <members>Payment.PaymentGroupId</members>
         <members>Payment.PaymentMethodId</members>
+        <members>Payment.Payment_Gateway_Token__c</members>
         <members>Payment.Phone</members>
         <members>Payment.ProcessingMode</members>
         <members>Payment.SfResultCode</members>
