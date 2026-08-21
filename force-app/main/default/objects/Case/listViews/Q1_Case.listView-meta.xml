@@ -9,8 +9,8 @@
     <columns>CASES.CREATED_DATE_DATE_ONLY</columns>
     <columns>CORE.USERS.ALIAS</columns>
     <filterScope>Queue</filterScope>
-    <label>Q1</label>
-    <queue>Q1</queue>
+    <label>Incoming Cases Queue</label>
+    <queue>Incoming_Cases_Queue</queue>
     <sharedTo>
         <allInternalUsers></allInternalUsers>
     </sharedTo>

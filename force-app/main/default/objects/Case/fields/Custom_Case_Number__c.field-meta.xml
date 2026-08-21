@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Custom_Case_Number__c</fullName>
-    <externalId>false</externalId>
     <description>Case number prefixed according to the Case record type.</description>
+    <externalId>false</externalId>
     <formula>CASE(
     RecordType.DeveloperName,
     &quot;General_Enquiry&quot;, &quot;GE_&quot;,
