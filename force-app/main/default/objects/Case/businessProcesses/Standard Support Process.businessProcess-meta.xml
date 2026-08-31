@@ -3,6 +3,14 @@
     <fullName>Standard Support Process</fullName>
     <isActive>true</isActive>
     <values>
+        <fullName>Approval Rejected</fullName>
+        <default>false</default>
+    </values>
+    <values>
+        <fullName>Approved</fullName>
+        <default>false</default>
+    </values>
+    <values>
         <fullName>Closed</fullName>
         <default>false</default>
     </values>
@@ -20,6 +28,10 @@
     </values>
     <values>
         <fullName>On Hold</fullName>
+        <default>false</default>
+    </values>
+    <values>
+        <fullName>Submitted for Approval</fullName>
         <default>false</default>
     </values>
 </BusinessProcess>

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CaseSettings xmlns="http://soap.sforce.com/2006/04/metadata">
+    <caseAssignRuleCommunity>false</caseAssignRuleCommunity>
     <caseAutoProcUser>false</caseAutoProcUser>
     <caseDescAttachments>false</caseDescAttachments>
     <caseFeedItemSettings>
@@ -30,6 +31,18 @@
         <overEmailLimitAction>Bounce</overEmailLimitAction>
         <preQuoteSignature>false</preQuoteSignature>
         <replyWithNewContentOnly>false</replyWithNewContentOnly>
+        <routingAddresses>
+            <addressType>EmailToCase</addressType>
+            <caseOrigin>Email</caseOrigin>
+            <casePriority>Medium</casePriority>
+            <createTask>false</createTask>
+            <emailAddress>ali@20three.digital</emailAddress>
+            <emailServicesAddress>ali@31gqekaz5cy546sux4pmk2f9plar3zyi9axyduy89uy4z5x5tr.fv-29wxhzfo2qa.are2s.case.sandbox.salesforce.com</emailServicesAddress>
+            <isPermsetControlled>false</isPermsetControlled>
+            <isVerified>false</isVerified>
+            <routingName>Email to Case</routingName>
+            <saveEmailHeaders>false</saveEmailHeaders>
+        </routingAddresses>
         <unauthorizedSenderAction>Discard</unauthorizedSenderAction>
         <useEmailHeadersForThreading>true</useEmailHeadersForThreading>
     </emailToCase>
@@ -40,6 +53,7 @@
     <enableEarlyEscalationRuleTriggers>false</enableEarlyEscalationRuleTriggers>
     <enableEmailActionDefaultsHandler>false</enableEmailActionDefaultsHandler>
     <enableEscalateQfiToCaseInternal>false</enableEscalateQfiToCaseInternal>
+    <enableEscalateQfiToCaseNetworks>false</enableEscalateQfiToCaseNetworks>
     <enableModernSlackSwarming>false</enableModernSlackSwarming>
     <enableMultiLangSolnSrchCSS>false</enableMultiLangSolnSrchCSS>
     <enableMultiLangSolnSrchPKB>false</enableMultiLangSolnSrchPKB>

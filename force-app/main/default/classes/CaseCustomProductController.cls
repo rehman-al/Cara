@@ -114,9 +114,11 @@ public with sharing class CaseCustomProductController {
                     ? 'Draft'
                     : requestRecord.Status__c;
 
-            recordToInsert.Product__c =
-                requestRecord.Product__c;
-
+            recordToInsert.Product__c = resolveOrCreateProduct(
+                requestRecord.Product__c,
+                requestRecord.Product_Name__c,
+                requestRecord.Description__c
+            );
 
             Database.SaveResult result =
                 Database.insert(
@@ -245,9 +247,11 @@ public with sharing class CaseCustomProductController {
                     ? 'Draft'
                     : requestRecord.Status__c;
 
-            recordToUpdate.Product__c =
-                requestRecord.Product__c;
-
+            recordToUpdate.Product__c = resolveOrCreateProduct(
+                requestRecord.Product__c,
+                requestRecord.Product_Name__c,
+                requestRecord.Description__c
+            );
 
             Database.SaveResult result =
                 Database.update(
@@ -450,6 +454,41 @@ public with sharing class CaseCustomProductController {
         } catch (Exception e) {
             throw handled('Unable to load custom product request files.', e);
         }
+    }
+
+    private static Id resolveOrCreateProduct(
+        Id existingProductId,
+        String productName,
+        String description
+    ) {
+        if (existingProductId != null) {
+            return existingProductId;
+        }
+
+        if (String.isBlank(productName)) {
+            return null;
+        }
+
+        List<Product2> existingProducts = [
+            SELECT Id
+            FROM Product2
+            WHERE Name = :productName
+            LIMIT 1
+        ];
+
+        if (!existingProducts.isEmpty()) {
+            return existingProducts[0].Id;
+        }
+
+        Product2 newProduct = new Product2(
+            Name = productName,
+            Description = description,
+            IsActive = true,
+            Is_Custom__c = true
+        );
+        insert newProduct;
+
+        return newProduct.Id;
     }
 
 

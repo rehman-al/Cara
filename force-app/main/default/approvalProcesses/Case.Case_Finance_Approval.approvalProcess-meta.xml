@@ -27,8 +27,26 @@
         <name>Finance_Review</name>
     </approvalStep>
     <enableMobileDeviceAccess>true</enableMobileDeviceAccess>
+    <finalApprovalActions>
+        <action>
+            <name>Update_Status_Approve</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalApprovalActions>
     <finalApprovalRecordLock>false</finalApprovalRecordLock>
+    <finalRejectionActions>
+        <action>
+            <name>Update_Status_Rejected</name>
+            <type>FieldUpdate</type>
+        </action>
+    </finalRejectionActions>
     <finalRejectionRecordLock>false</finalRejectionRecordLock>
+    <initialSubmissionActions>
+        <action>
+            <name>Update_Status_Submitted</name>
+            <type>FieldUpdate</type>
+        </action>
+    </initialSubmissionActions>
     <label>Case Finance Approval</label>
     <processOrder>1</processOrder>
     <recordEditability>AdminOrCurrentApprover</recordEditability>

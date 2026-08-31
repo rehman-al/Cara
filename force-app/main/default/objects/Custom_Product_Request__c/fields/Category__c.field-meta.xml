@@ -4,15 +4,32 @@
     <label>Category</label>
     <required>false</required>
     <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
     <type>Picklist</type>
     <valueSet>
         <restricted>true</restricted>
         <valueSetDefinition>
             <sorted>false</sorted>
-            <value><fullName>Product</fullName><default>false</default><label>Product</label></value>
-            <value><fullName>Service</fullName><default>false</default><label>Service</label></value>
-            <value><fullName>Custom</fullName><default>false</default><label>Custom</label></value>
-            <value><fullName>Other</fullName><default>false</default><label>Other</label></value>
+            <value>
+                <fullName>Product</fullName>
+                <default>false</default>
+                <label>Product</label>
+            </value>
+            <value>
+                <fullName>Service</fullName>
+                <default>false</default>
+                <label>Service</label>
+            </value>
+            <value>
+                <fullName>Custom</fullName>
+                <default>false</default>
+                <label>Custom</label>
+            </value>
+            <value>
+                <fullName>Other</fullName>
+                <default>false</default>
+                <label>Other</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>
