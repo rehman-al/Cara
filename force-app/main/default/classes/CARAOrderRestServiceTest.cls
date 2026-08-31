@@ -105,21 +105,54 @@ private class CARAOrderRestServiceTest {
     }
 
     @IsTest
-    static void missingProductRollsBackCustomerAndOrder() {
-        Map<String, Object> invalidPayload = buildFullPayload();
-        List<Object> items = (List<Object>) invalidPayload.get('productItems');
+    static void missingProductIsCreatedAndUsedForOrderItem() {
+        Map<String, Object> payload = buildFullPayload();
+        List<Object> items = (List<Object>) payload.get('productItems');
         Map<String, Object> item = (Map<String, Object>) items[0];
         item.put('productId', 'missing-product');
+        item.put('productName', 'Product Created by CARA Sync');
 
         Test.startTest();
-        invokeService(JSON.serialize(invalidPayload));
+        invokeService(JSON.serialize(payload));
         Test.stopTest();
 
-        Assert.areEqual(400, RestContext.response.statusCode);
-        Assert.isTrue(RestContext.response.responseBody.toString().contains('Product2 not found'));
-        Assert.areEqual(0, [SELECT COUNT() FROM Account]);
-        Assert.areEqual(0, [SELECT COUNT() FROM Contact]);
-        Assert.areEqual(0, [SELECT COUNT() FROM Order]);
+        Assert.areEqual(200, RestContext.response.statusCode, RestContext.response.responseBody.toString());
+        Product2 createdProduct = [
+            SELECT Id, Name, ProductCode, IsActive
+            FROM Product2
+            WHERE ProductCode = 'missing-product'
+            LIMIT 1
+        ];
+        Assert.areEqual('Product Created by CARA Sync', createdProduct.Name);
+        Assert.isTrue(createdProduct.IsActive);
+
+        OrderItem createdItem = [
+            SELECT Product2Id, Product2.ProductCode
+            FROM OrderItem
+            WHERE Line_Item_External_ID__c = '9b3cbdd3b1bf7ba6db4a030b6c'
+            LIMIT 1
+        ];
+        Assert.areEqual(createdProduct.Id, createdItem.Product2Id);
+        Assert.areEqual('missing-product', createdItem.Product2.ProductCode);
+    }
+
+    @IsTest
+    static void activatesStandardPricebookWhenNeeded() {
+        Id standardPricebookId = Test.getStandardPricebookId();
+        update new Pricebook2(Id = standardPricebookId, IsActive = false);
+
+        Test.startTest();
+        invokeService(JSON.serialize(buildFullPayload()));
+        Test.stopTest();
+
+        Assert.areEqual(200, RestContext.response.statusCode, RestContext.response.responseBody.toString());
+        Pricebook2 activatedPricebook = [
+            SELECT IsActive
+            FROM Pricebook2
+            WHERE Id = :standardPricebookId
+        ];
+        Assert.isTrue(activatedPricebook.IsActive);
+        Assert.areEqual(1, [SELECT COUNT() FROM Order WHERE OrderReferenceNumber = '00000429']);
     }
 
     private static void invokeService(String requestBody) {

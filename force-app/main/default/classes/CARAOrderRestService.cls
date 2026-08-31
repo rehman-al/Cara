@@ -1,4 +1,4 @@
-@RestResource(urlMapping='/cara/order')
+@RestResource(urlMapping='/cara/createOrder')
 global with sharing class CARAOrderRestService {
     private static final String ORDER_STATUS_DRAFT = 'Draft';
     private static final String PAYMENT_STATUS_PENDING = 'Pending';
@@ -111,6 +111,7 @@ global with sharing class CARAOrderRestService {
 
         Set<String> productCodes = new Set<String>();
         Set<String> lineItemKeys = new Set<String>();
+        Map<String, CARAOrderPayload.ProductItem> sampleItemByProductCode = new Map<String, CARAOrderPayload.ProductItem>();
         for (CARAOrderPayload.ProductItem item : productItems) {
             if (item == null || String.isBlank(item.itemId) || String.isBlank(item.productId)) {
                 throw new IntegrationException('Each productItems entry requires itemId and productId.');
@@ -122,8 +123,12 @@ global with sharing class CARAOrderRestService {
                 throw new IntegrationException('Duplicate product itemId in payload: ' + item.itemId);
             }
             productCodes.add(item.productId);
+            if (!sampleItemByProductCode.containsKey(item.productId)) {
+                sampleItemByProductCode.put(item.productId, item);
+            }
         }
 
+        List<Product2> productsToActivate = new List<Product2>();
         for (Product2 productRecord : [
             SELECT Id, Name, ProductCode, IsActive
             FROM Product2
@@ -133,20 +138,34 @@ global with sharing class CARAOrderRestService {
                 throw new IntegrationException('Multiple Product2 records use ProductCode ' + productRecord.ProductCode + '.');
             }
             if (!productRecord.IsActive) {
-                throw new IntegrationException('Product2 is inactive for ProductCode ' + productRecord.ProductCode + '.');
+                productRecord.IsActive = true;
+                productsToActivate.add(productRecord);
             }
             context.productByCode.put(productRecord.ProductCode, productRecord);
         }
 
-        List<String> missingProductCodes = new List<String>();
+        List<Product2> productsToInsert = new List<Product2>();
         for (String productCode : productCodes) {
             if (!context.productByCode.containsKey(productCode)) {
-                missingProductCodes.add(productCode);
+                CARAOrderPayload.ProductItem sampleItem = sampleItemByProductCode.get(productCode);
+                productsToInsert.add(
+                    new Product2(
+                        Name = firstNonBlank(sampleItem.productName, sampleItem.itemText, productCode),
+                        ProductCode = productCode,
+                        IsActive = true
+                    )
+                );
             }
         }
-        if (!missingProductCodes.isEmpty()) {
-            missingProductCodes.sort();
-            throw new IntegrationException('Product2 not found for ProductCode(s): ' + String.join(missingProductCodes, ', '));
+
+        if (!productsToActivate.isEmpty()) {
+            update productsToActivate;
+        }
+        if (!productsToInsert.isEmpty()) {
+            insert productsToInsert;
+            for (Product2 productRecord : productsToInsert) {
+                context.productByCode.put(productRecord.ProductCode, productRecord);
+            }
         }
 
         List<Pricebook2> standardPricebooks = [
@@ -155,8 +174,12 @@ global with sharing class CARAOrderRestService {
             WHERE IsStandard = true
             LIMIT 1
         ];
-        if (standardPricebooks.isEmpty() || !standardPricebooks[0].IsActive) {
-            throw new IntegrationException('The standard Salesforce price book must be active.');
+        if (standardPricebooks.isEmpty()) {
+            throw new IntegrationException('The standard Salesforce price book could not be found.');
+        }
+        if (!standardPricebooks[0].IsActive) {
+            standardPricebooks[0].IsActive = true;
+            update standardPricebooks[0];
         }
         context.pricebookId = standardPricebooks[0].Id;
 
