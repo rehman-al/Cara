@@ -1,0 +1,94 @@
+<template>
+    <article class="chat-shell">
+        <header class="chat-header">
+            <div class="avatar" aria-hidden="true">
+                <lightning-icon
+                    icon-name="standard:account"
+                    size="small"
+                    alternative-text=""
+                ></lightning-icon>
+            </div>
+            <div class="header-copy">
+                <h2 class="customer-name">{accountName}</h2>
+                <!-- <p class="status"><span class="status-dot"></span>Case chat</p> -->
+            </div>
+            <lightning-button-icon
+                icon-name="utility:refresh"
+                variant="bare"
+                alternative-text={refreshButtonTitle}
+                title={refreshButtonTitle}
+                disabled={isRefreshDisabled}
+                onclick={handleRefresh}
+            ></lightning-button-icon>
+        </header>
+
+        <section
+            class="message-list"
+            aria-label="Case messages"
+            aria-live="polite"
+            aria-busy={isLoading}
+        >
+            <template lwc:if={isInitialLoading}>
+                <lightning-spinner
+                    alternative-text="Loading messages"
+                    size="small"
+                ></lightning-spinner>
+            </template>
+            <template lwc:elseif={loadError}>
+                <div class="state-message error-message" role="alert">
+                    {loadError}
+                </div>
+            </template>
+            <template lwc:elseif={hasMessages}>
+                <template for:each={messages} for:item="message">
+                    <div class={message.rowClass} key={message.id}>
+                        <div class="message-meta">
+                            <span class="sender-name">{message.senderName}</span>
+                            <lightning-formatted-date-time
+                                value={message.createdDate}
+                                hour="numeric"
+                                minute="2-digit"
+                            ></lightning-formatted-date-time>
+                        </div>
+                        <div class={message.bubbleClass}>
+                            <lightning-formatted-text
+                                value={message.body}
+                            ></lightning-formatted-text>
+                        </div>
+                    </div>
+                </template>
+                <div class="scroll-anchor" aria-hidden="true"></div>
+            </template>
+            <template lwc:else>
+                <div class="state-message">
+                    No messages yet. Start the conversation below.
+                </div>
+            </template>
+        </section>
+
+        <footer class="composer">
+            <lightning-textarea
+                class="message-input"
+                label="Message"
+                variant="label-hidden"
+                placeholder="Type a message..."
+                value={draftMessage}
+                maxlength="4000"
+                disabled={isSending}
+                onchange={handleMessageInput}
+                onkeydown={handleKeyDown}
+            ></lightning-textarea>
+            <lightning-button-icon
+                class="send-button"
+                icon-name="utility:send"
+                variant="brand"
+                size="large"
+                alternative-text="Send message"
+                title="Send message"
+                disabled={isSendDisabled}
+                onclick={handleSend}
+            ></lightning-button-icon>
+        </footer>
+        <p class="composer-hint">Press Enter to send · Shift+Enter for a new line</p>
+    </article>
+</template>
