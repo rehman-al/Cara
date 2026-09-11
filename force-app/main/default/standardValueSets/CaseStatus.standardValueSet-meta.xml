@@ -14,12 +14,6 @@
         <closed>false</closed>
     </standardValue>
     <standardValue>
-        <fullName>Closed</fullName>
-        <default>false</default>
-        <label>Closed</label>
-        <closed>true</closed>
-    </standardValue>
-    <standardValue>
         <fullName>Escalated</fullName>
         <default>false</default>
         <label>Escalated</label>
@@ -44,9 +38,45 @@
         <closed>false</closed>
     </standardValue>
     <standardValue>
-        <fullName>Approval Rejected</fullName>
+        <fullName>KYC Approval Pending</fullName>
         <default>false</default>
-        <label>Approval Rejected</label>
+        <label>KYC Approval Pending</label>
         <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>KYC Requirement Sent to Customer</fullName>
+        <default>false</default>
+        <label>KYC Requirement Sent to Customer</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Customer Replied to KYC</fullName>
+        <default>false</default>
+        <label>Customer Replied to KYC</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Pending for Compliance Approval</fullName>
+        <default>false</default>
+        <label>Pending for Compliance Approval</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Compliance Approved</fullName>
+        <default>false</default>
+        <label>Compliance Approved</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Compliance Rejected</fullName>
+        <default>false</default>
+        <label>Compliance Rejected</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Closed</fullName>
+        <default>false</default>
+        <label>Closed</label>
+        <closed>true</closed>
     </standardValue>
 </StandardValueSet>

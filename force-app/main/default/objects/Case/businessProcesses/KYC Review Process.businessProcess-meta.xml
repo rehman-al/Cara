@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BusinessProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>KYC Review Process</fullName>
+    <description>Support process for KYC review cases related to high-value orders</description>
+    <isActive>true</isActive>
+    <values>
+        <fullName>Closed</fullName>
+        <default>false</default>
+    </values>
+    <values>
+        <fullName>Compliance Approved</fullName>
+        <default>false</default>
+    </values>
+    <values>
+        <fullName>Compliance Rejected</fullName>
+        <default>false</default>
+    </values>
+    <values>
+        <fullName>Customer Replied to KYC</fullName>
+        <default>false</default>
+    </values>
+    <values>
+        <fullName>KYC Approval Pending</fullName>
+        <default>true</default>
+    </values>
+    <values>
+        <fullName>KYC Requirement Sent to Customer</fullName>
+        <default>false</default>
+    </values>
+    <values>
+        <fullName>Pending for Compliance Approval</fullName>
+        <default>false</default>
+    </values>
+</BusinessProcess>
