@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>interested_in__c</fullName>
+    <label>What are you interested in?</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>General appointment</fullName>
+                <default>false</default>
+                <label>General appointment</label>
+            </value>
+            <value>
+                <fullName>Bridal &amp; engagement</fullName>
+                <default>false</default>
+                <label>Bridal &amp; engagement</label>
+            </value>
+            <value>
+                <fullName>High jewellery</fullName>
+                <default>false</default>
+                <label>High jewellery</label>
+            </value>
+            <value>
+                <fullName>Repairs &amp; servicing</fullName>
+                <default>false</default>
+                <label>Repairs &amp; servicing</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
