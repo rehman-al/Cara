@@ -3,7 +3,6 @@
     <fullName>KYC_Completed__c</fullName>
     <defaultValue>false</defaultValue>
     <label>KYC Completed</label>
-    <trackHistory>false</trackHistory>
-    <trackTrending>false</trackTrending>
+    <trackFeedHistory>false</trackFeedHistory>
     <type>Checkbox</type>
 </CustomField>

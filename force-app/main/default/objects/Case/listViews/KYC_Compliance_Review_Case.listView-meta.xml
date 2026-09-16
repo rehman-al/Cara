@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ListView xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>KYC_Compliance_Review_Case</fullName>
+    <filterScope>Queue</filterScope>
+    <label>KYC Compliance Review</label>
+    <queue>KYC_Compliance_Review</queue>
+    <sharedTo>
+        <allInternalUsers></allInternalUsers>
+    </sharedTo>
+</ListView>

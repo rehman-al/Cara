@@ -13,7 +13,7 @@
     <fieldUpdates>
         <fullName>Update_Status_Approve</fullName>
         <field>Status</field>
-        <literalValue>Approved</literalValue>
+        <literalValue>Compliance Approved</literalValue>
         <name>Update Status Approve</name>
         <notifyAssignee>false</notifyAssignee>
         <operation>Literal</operation>
@@ -33,7 +33,7 @@
     <fieldUpdates>
         <fullName>Update_Status_Rejected</fullName>
         <field>Status</field>
-        <literalValue>Approval Rejected</literalValue>
+        <literalValue>Compliance Rejected</literalValue>
         <name>Update Status Rejected</name>
         <notifyAssignee>false</notifyAssignee>
         <operation>Literal</operation>

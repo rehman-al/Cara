@@ -8,5 +8,6 @@
     <relationshipName>Chat_Messages</relationshipName>
     <required>true</required>
     <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
     <type>Lookup</type>
 </CustomField>

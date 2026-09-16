@@ -26,4 +26,9 @@
         <default>false</default>
         <label>Twitter</label>
     </standardValue>
+    <standardValue>
+        <fullName>KYC Automation</fullName>
+        <default>false</default>
+        <label>KYC Automation</label>
+    </standardValue>
 </StandardValueSet>

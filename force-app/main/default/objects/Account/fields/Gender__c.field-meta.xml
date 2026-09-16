@@ -3,18 +3,37 @@
     <fullName>Gender__c</fullName>
     <label>Gender</label>
     <required>false</required>
-    <trackHistory>false</trackHistory>
-    <trackTrending>false</trackTrending>
+    <trackFeedHistory>false</trackFeedHistory>
     <type>Picklist</type>
     <valueSet>
         <restricted>true</restricted>
         <valueSetDefinition>
             <sorted>false</sorted>
-            <value><fullName>Male</fullName><default>false</default><label>Male</label></value>
-            <value><fullName>Female</fullName><default>false</default><label>Female</label></value>
-            <value><fullName>Non-binary</fullName><default>false</default><label>Non-binary</label></value>
-            <value><fullName>Other</fullName><default>false</default><label>Other</label></value>
-            <value><fullName>Prefer not to say</fullName><default>false</default><label>Prefer not to say</label></value>
+            <value>
+                <fullName>Male</fullName>
+                <default>false</default>
+                <label>Male</label>
+            </value>
+            <value>
+                <fullName>Female</fullName>
+                <default>false</default>
+                <label>Female</label>
+            </value>
+            <value>
+                <fullName>Non-binary</fullName>
+                <default>false</default>
+                <label>Non-binary</label>
+            </value>
+            <value>
+                <fullName>Other</fullName>
+                <default>false</default>
+                <label>Other</label>
+            </value>
+            <value>
+                <fullName>Prefer not to say</fullName>
+                <default>false</default>
+                <label>Prefer not to say</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>

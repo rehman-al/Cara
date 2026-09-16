@@ -23,7 +23,7 @@
         <enableHtmlEmail>true</enableHtmlEmail>
         <enableNewToReadTriggers>false</enableNewToReadTriggers>
         <enableOnDemandEmailToCase>true</enableOnDemandEmailToCase>
-        <enableThreadTokenInBody>false</enableThreadTokenInBody>
+        <enableThreadTokenInBody>true</enableThreadTokenInBody>
         <enableThreadTokenInSubject>false</enableThreadTokenInSubject>
         <movingEmailEnabled>false</movingEmailEnabled>
         <notifyOwnerOnNewCaseEmail>true</notifyOwnerOnNewCaseEmail>
@@ -83,6 +83,7 @@
     <useSystemUserAsDefaultCaseUser>true</useSystemUserAsDefaultCaseUser>
     <visibleInCssCheckbox>false</visibleInCssCheckbox>
     <webToCase>
-        <enableWebToCase>false</enableWebToCase>
+        <caseOrigin>Web</caseOrigin>
+        <enableWebToCase>true</enableWebToCase>
     </webToCase>
 </CaseSettings>

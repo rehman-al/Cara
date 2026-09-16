@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Capacity__c</fullName>
+    <defaultValue>1</defaultValue>
+    <description>Maximum number of concurrent bookings this recurring slot allows per date. Defaults to 1 to preserve existing single-booking behavior.</description>
+    <externalId>false</externalId>
+    <label>Capacity</label>
+    <precision>3</precision>
+    <required>false</required>
+    <scale>0</scale>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

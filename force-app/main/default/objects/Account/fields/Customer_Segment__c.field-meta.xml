@@ -3,17 +3,62 @@
     <fullName>Customer_Segment__c</fullName>
     <label>Customer Segment</label>
     <required>false</required>
-    <trackHistory>false</trackHistory>
-    <trackTrending>false</trackTrending>
+    <trackFeedHistory>false</trackFeedHistory>
     <type>Picklist</type>
     <valueSet>
         <restricted>true</restricted>
         <valueSetDefinition>
             <sorted>false</sorted>
-            <value><fullName>Retail</fullName><default>false</default><label>Retail</label></value>
-            <value><fullName>Corporate</fullName><default>false</default><label>Corporate</label></value>
-            <value><fullName>High Net Worth</fullName><default>false</default><label>High Net Worth</label></value>
-            <value><fullName>Employee</fullName><default>false</default><label>Employee</label></value>
+            <value>
+                <fullName>Retail</fullName>
+                <default>false</default>
+                <label>Retail</label>
+            </value>
+            <value>
+                <fullName>Corporate</fullName>
+                <default>false</default>
+                <label>Corporate</label>
+            </value>
+            <value>
+                <fullName>High Net Worth</fullName>
+                <default>false</default>
+                <label>High Net Worth</label>
+            </value>
+            <value>
+                <fullName>Employee</fullName>
+                <default>false</default>
+                <label>Employee</label>
+            </value>
+            <value>
+                <fullName>High Value</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>High Value</label>
+            </value>
+            <value>
+                <fullName>Loyalty</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Loyalty</label>
+            </value>
+            <value>
+                <fullName>Occasional</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Occasional</label>
+            </value>
+            <value>
+                <fullName>Online</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Online</label>
+            </value>
+            <value>
+                <fullName>Walk-in</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Walk-in</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>

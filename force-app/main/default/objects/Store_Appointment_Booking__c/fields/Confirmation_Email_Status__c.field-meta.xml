@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Confirmation_Email_Status__c</fullName>
+    <description>Whether the guest confirmation email + calendar invite was successfully queued for this booking. Set every time, success or failure, so a silent send failure is never invisible.</description>
+    <label>Confirmation Email Status</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Sent</fullName>
+                <default>false</default>
+                <label>Sent</label>
+            </value>
+            <value>
+                <fullName>Failed</fullName>
+                <default>false</default>
+                <label>Failed</label>
+            </value>
+            <value>
+                <fullName>Skipped - No Email</fullName>
+                <default>false</default>
+                <label>Skipped - No Email</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

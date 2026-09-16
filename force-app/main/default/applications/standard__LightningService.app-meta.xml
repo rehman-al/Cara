@@ -44,6 +44,9 @@
     <tabs>standard-Incident</tabs>
     <tabs>standard-Problem</tabs>
     <tabs>standard-ChangeRequest</tabs>
+    <tabs>Store_Appointment_Booking__c</tabs>
+    <tabs>Store__c</tabs>
+    <tabs>Store_Time_Slot__c</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>LightningService_UtilityBar</utilityBar>
     <workspaceConfig>
@@ -52,6 +55,15 @@
         </mappings>
         <mappings>
             <tab>MobileLanding</tab>
+        </mappings>
+        <mappings>
+            <tab>Store_Appointment_Booking__c</tab>
+        </mappings>
+        <mappings>
+            <tab>Store_Time_Slot__c</tab>
+        </mappings>
+        <mappings>
+            <tab>Store__c</tab>
         </mappings>
         <mappings>
             <tab>standard-Account</tab>

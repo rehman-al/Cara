@@ -3,7 +3,6 @@
     <fullName>Last_Order_Date__c</fullName>
     <label>Last Order Date</label>
     <required>false</required>
-    <trackHistory>false</trackHistory>
-    <trackTrending>false</trackTrending>
+    <trackFeedHistory>false</trackFeedHistory>
     <type>Date</type>
 </CustomField>

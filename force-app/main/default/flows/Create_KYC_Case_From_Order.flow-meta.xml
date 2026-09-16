@@ -123,6 +123,12 @@
             </value>
         </inputAssignments>
         <inputAssignments>
+            <field>Origin</field>
+            <value>
+                <stringValue>KYC Automation</stringValue>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
             <field>OwnerId</field>
             <value>
                 <elementReference>Get_KYC_Compliance_Review_Queue.Id</elementReference>
@@ -132,6 +138,12 @@
             <field>RecordTypeId</field>
             <value>
                 <elementReference>Get_KYC_Required_Record_Type.Id</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Status</field>
+            <value>
+                <stringValue>KYC Approval Pending</stringValue>
             </value>
         </inputAssignments>
         <inputAssignments>

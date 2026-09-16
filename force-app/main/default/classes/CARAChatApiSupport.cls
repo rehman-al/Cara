@@ -31,7 +31,30 @@ public with sharing class CARAChatApiSupport {
 
         return caseId;
     }
+    public static Case requireCaseByNumber(String caseNumberValue) {
+    String caseNumber = caseNumberValue == null
+        ? null
+        : caseNumberValue.trim();
 
+    if (String.isBlank(caseNumber)) {
+        throw new RequestException('caseNumber is required.');
+    }
+
+    List<Case> cases = [
+        SELECT Id, CaseNumber
+        FROM Case
+        WHERE CaseNumber = :caseNumber
+        LIMIT 1
+    ];
+
+    if (cases.isEmpty()) {
+        throw new NotFoundException(
+            'The Case was not found or is not accessible.'
+        );
+    }
+
+    return cases[0];
+    }
     public static String requireMessageBody(String messageBody) {
         String normalizedBody = messageBody == null ? null : messageBody.trim();
         if (String.isBlank(normalizedBody)) {

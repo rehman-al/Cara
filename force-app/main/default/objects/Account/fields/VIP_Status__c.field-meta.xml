@@ -3,7 +3,6 @@
     <fullName>VIP_Status__c</fullName>
     <defaultValue>false</defaultValue>
     <label>VIP Status</label>
-    <trackHistory>false</trackHistory>
-    <trackTrending>false</trackTrending>
+    <trackFeedHistory>false</trackFeedHistory>
     <type>Checkbox</type>
 </CustomField>
