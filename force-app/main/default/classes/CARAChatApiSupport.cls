@@ -55,6 +55,26 @@ public with sharing class CARAChatApiSupport {
 
     return cases[0];
     }
+
+    public static Case requireCaseById(String caseIdValue) {
+        Id caseId = requireCaseId(caseIdValue);
+
+        List<Case> cases = [
+            SELECT Id, CaseNumber
+            FROM Case
+            WHERE Id = :caseId
+            LIMIT 1
+        ];
+
+        if (cases.isEmpty()) {
+            throw new NotFoundException(
+                'The Case was not found or is not accessible.'
+            );
+        }
+
+        return cases[0];
+    }
+
     public static String requireMessageBody(String messageBody) {
         String normalizedBody = messageBody == null ? null : messageBody.trim();
         if (String.isBlank(normalizedBody)) {

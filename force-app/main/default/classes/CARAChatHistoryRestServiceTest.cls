@@ -44,9 +44,9 @@ private class CARAChatHistoryRestServiceTest {
         // --------------------------
         // TEST WITH 50 MESSAGES
         // --------------------------
-        setGetRequest(testCase.CaseNumber);
+        setGetRequest(testCase.Id);
 
-        
+
 
         CARAChatHistoryRestService.getChatHistory();
 
@@ -64,7 +64,7 @@ private class CARAChatHistoryRestServiceTest {
 
         System.assertEquals(
             50,
-            ((Decimal) firstResponse.get('totalMessages')).intValue()
+            ((Decimal) firstResponse.get('count')).intValue()
         );
 
         List<Object> firstMessages =
@@ -90,7 +90,7 @@ private class CARAChatHistoryRestServiceTest {
         // --------------------------
         // TEST WITH 51 MESSAGES
         // --------------------------
-        setGetRequest(testCase.CaseNumber);
+        setGetRequest(testCase.Id);
 
 
         CARAChatHistoryRestService.getChatHistory();
@@ -109,7 +109,7 @@ private class CARAChatHistoryRestServiceTest {
 
         System.assertEquals(
             51,
-            ((Decimal) secondResponse.get('totalMessages')).intValue()
+            ((Decimal) secondResponse.get('count')).intValue()
         );
 
         List<Object> secondMessages =
@@ -121,7 +121,7 @@ private class CARAChatHistoryRestServiceTest {
         );
 
 
-        // Verify sequence 1 -> 51
+        // Verify chronological ordering (message 1 -> message 51)
         Map<String, Object> firstMessage =
             (Map<String, Object>) secondMessages[0];
 
@@ -129,24 +129,24 @@ private class CARAChatHistoryRestServiceTest {
             (Map<String, Object>) secondMessages[50];
 
         System.assertEquals(
-            1,
-            ((Decimal) firstMessage.get('sequence')).intValue()
+            'Test message 1',
+            (String) firstMessage.get('body')
         );
 
         System.assertEquals(
-            51,
-            ((Decimal) lastMessage.get('sequence')).intValue()
+            'Test message 51',
+            (String) lastMessage.get('body')
         );
 
-        // System.assertEquals(
-        //     'Test message 51',
-        //     (String) lastMessage.get('message')
-        // );
+        System.assertEquals(
+            String.valueOf(testCase.Id),
+            (String) lastMessage.get('caseId')
+        );
     }
 
 
     @IsTest
-    static void rejectsMissingCaseNumber() {
+    static void rejectsMissingCaseId() {
 
         RestRequest requestRecord = new RestRequest();
 
@@ -171,7 +171,7 @@ private class CARAChatHistoryRestServiceTest {
     }
 
 
-    private static void setGetRequest(String caseNumber) {
+    private static void setGetRequest(Id caseId) {
 
         RestRequest requestRecord = new RestRequest();
 
@@ -181,8 +181,8 @@ private class CARAChatHistoryRestServiceTest {
         requestRecord.httpMethod = 'GET';
 
         requestRecord.addParameter(
-            'caseNumber',
-            caseNumber
+            'caseId',
+            caseId
         );
 
         RestContext.request = requestRecord;
