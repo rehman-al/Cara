@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Customer_Tags__c</fullName>
+    <description>Customer tier label derived from Customer Lifetime Spend. System-maintained formula; do not edit manually.</description>
+    <externalId>false</externalId>
+    <formula>IF(Customer_Lifetime_Spend__c &lt;= 0, &quot;Not a Valid Customer&quot;,
+IF(Customer_Lifetime_Spend__c &lt; 10000, &quot;New Customer&quot;,
+IF(Customer_Lifetime_Spend__c &lt; 50000, &quot;Regular Customer&quot;,
+IF(Customer_Lifetime_Spend__c &lt; 100000, &quot;Valued Customer&quot;,
+IF(Customer_Lifetime_Spend__c &lt; 250000, &quot;High Value Customer&quot;,
+IF(Customer_Lifetime_Spend__c &lt; 500000, &quot;Premium Customer&quot;,
+IF(Customer_Lifetime_Spend__c &lt; 1000000, &quot;VIP Customer&quot;,
+IF(Customer_Lifetime_Spend__c &lt; 2500000, &quot;Elite Customer&quot;,
+&quot;Platinum Customer&quot;))))))))</formula>
+    <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>
+    <inlineHelpText>Automatically calculated from Customer Lifetime Spend.</inlineHelpText>
+    <label>Customer Tags</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

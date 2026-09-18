@@ -1,0 +1,386 @@
+<template>
+    <div class="customer-shell">
+
+        <!-- HEADER -->
+        <div class="customer-header">
+            <div class="customer-header-left">
+                <div class="customer-icon">
+                    <lightning-icon
+                        icon-name="standard:account"
+                        size="small">
+                    </lightning-icon>
+                </div>
+
+                <div>
+                    <div class="customer-title">
+                        Customer 360
+                    </div>
+
+                    <div class="customer-subtitle">
+                        Complete customer context for this Case
+                    </div>
+                </div>
+            </div>
+
+            <lightning-button-icon
+                icon-name="utility:refresh"
+                alternative-text="Refresh"
+                title="Refresh"
+                onclick={handleRefresh}>
+            </lightning-button-icon>
+        </div>
+
+
+        <div class="slds-var-p-around_medium">
+
+            <!-- LOADING -->
+            <template lwc:if={isLoading}>
+                <div class="loading-area">
+                    <lightning-spinner
+                        alternative-text="Loading Customer 360"
+                        size="medium">
+                    </lightning-spinner>
+                </div>
+            </template>
+
+
+            <!-- ERROR -->
+            <template lwc:elseif={error}>
+                <div class="error-state">
+                    {error}
+                </div>
+            </template>
+
+
+            <!-- ACCOUNT FOUND -->
+            <template lwc:elseif={hasAccount}>
+
+                <!-- SUMMARY -->
+                <div class="section-title">
+                    Customer Overview
+                </div>
+
+                <div class="metrics-grid">
+
+                    <div class="metric-card">
+                        <span class="metric-label">
+                            Customer Status
+                        </span>
+
+                        <span class="metric-value-small">
+                            {customerStatus}
+                        </span>
+                    </div>
+
+
+                    <div class="metric-card">
+                        <span class="metric-label">
+                            AED Lifetime Value
+                        </span>
+
+                        <span class="metric-value">
+                            <lightning-formatted-number
+                                value={lifetimeValue}
+                                format-style="currency"
+                                currency-code="AED">
+                            </lightning-formatted-number>
+                        </span>
+                    </div>
+
+
+                    <div class="metric-card">
+                        <span class="metric-label">
+                            Total Orders
+                        </span>
+
+                        <span class="metric-value">
+                            {totalOrders}
+                        </span>
+                    </div>
+
+
+                    <div class="metric-card">
+                        <span class="metric-label">
+                            Completed Orders
+                        </span>
+
+                        <span class="metric-value">
+                            {completedOrders}
+                        </span>
+                    </div>
+
+
+                    <div class="metric-card">
+                        <span class="metric-label">
+                            Latest Shipping Status
+                        </span>
+
+                        <span class="metric-value-small">
+                            {latestShippingStatus}
+                        </span>
+                    </div>
+
+                </div>
+
+
+                <!-- ACCOUNT + CONTACT -->
+                <div class="information-grid">
+
+                    <!-- ACCOUNT -->
+                    <div class="info-card">
+
+                        <div class="info-card-header">
+                            <lightning-icon
+                                icon-name="standard:account"
+                                size="small">
+                            </lightning-icon>
+
+                            <span>Account Information</span>
+                        </div>
+
+
+                        <div class="field-row">
+                            <span class="field-label">
+                                Account Name
+                            </span>
+
+                            <lightning-button
+                                variant="base"
+                                label={accountName}
+                                onclick={openAccount}>
+                            </lightning-button>
+                        </div>
+
+
+                       
+
+
+                        <div class="field-row">
+                            <span class="field-label">
+                                Phone
+                            </span>
+
+                            <span class="field-value">
+                                {accountPhone}
+                            </span>
+                        </div>
+
+
+                        <div class="field-row">
+                            <span class="field-label">
+                                Type
+                            </span>
+
+                            <span class="field-value">
+                                {accountType}
+                            </span>
+                        </div>
+
+
+                        <div class="field-row">
+                            <span class="field-label">
+                                Customer Status
+                            </span>
+
+                            <span class="field-value">
+                                {customerStatus}
+                            </span>
+                        </div>
+
+                    </div>
+
+
+                    <!-- CONTACT -->
+                    <div class="info-card">
+
+                        <div class="info-card-header">
+                            <lightning-icon
+                                icon-name="standard:contact"
+                                size="small">
+                            </lightning-icon>
+
+                            <span>Contact Information</span>
+                        </div>
+
+
+                        <template lwc:if={hasContact}>
+
+                            <div class="field-row">
+                                <span class="field-label">
+                                    Contact Name
+                                </span>
+
+                                <lightning-button
+                                    variant="base"
+                                    label={contact.Name}
+                                    onclick={openContact}>
+                                </lightning-button>
+                            </div>
+
+
+                            <div class="field-row">
+                                <span class="field-label">
+                                    Email
+                                </span>
+
+                                <lightning-formatted-email
+                                    value={contact.Email}>
+                                </lightning-formatted-email>
+                            </div>
+
+
+                            <div class="field-row">
+                                <span class="field-label">
+                                    Phone
+                                </span>
+
+                                <span class="field-value">
+                                    {contactPhone}
+                                </span>
+                            </div>
+
+
+                            <div class="field-row">
+                                <span class="field-label">
+                                    Mobile
+                                </span>
+
+                                <span class="field-value">
+                                    {contactMobile}
+                                </span>
+                            </div>
+
+                        </template>
+
+
+                        <template lwc:else>
+                            <div class="empty-state">
+                                No Contact is linked to this Case.
+                            </div>
+                        </template>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ORDERS -->
+                <div class="data-section">
+
+                    <div class="section-header">
+                        <span class="section-title">
+                            Order History
+                        </span>
+
+                        <span class="count-badge">
+                            {totalOrders} Orders
+                        </span>
+                    </div>
+
+
+                    <template lwc:if={hasOrders}>
+                        <div class="customer-table">
+                            <lightning-datatable
+                                key-field="Id"
+                                data={orders}
+                                columns={orderColumns}
+                                hide-checkbox-column
+                                onrowaction={handleOrderAction}>
+                            </lightning-datatable>
+                        </div>
+                    </template>
+
+
+                    <template lwc:else>
+                        <div class="empty-state">
+                            No orders found for this customer.
+                        </div>
+                    </template>
+
+                </div>
+
+
+                <!-- PREVIOUS CASES -->
+                <div class="data-section">
+
+                    <div class="section-header">
+                        <span class="section-title">
+                            Previous Cases
+                        </span>
+
+                        <span class="count-badge">
+                            {totalCases} Total Cases
+                        </span>
+                    </div>
+
+
+                    <template lwc:if={hasPreviousCases}>
+                        <div class="customer-table">
+                            <lightning-datatable
+                                key-field="Id"
+                                data={previousCases}
+                                columns={caseColumns}
+                                hide-checkbox-column
+                                onrowaction={handleCaseAction}>
+                            </lightning-datatable>
+                        </div>
+                    </template>
+
+
+                    <template lwc:else>
+                        <div class="empty-state">
+                            No previous Cases found.
+                        </div>
+                    </template>
+
+                </div>
+
+
+                <!-- CONVERSATIONS -->
+                <div class="data-section">
+
+                    <div class="section-header">
+                        <span class="section-title">
+                            Previous Conversations
+                        </span>
+
+                        <span class="count-badge">
+                            {conversationCount} Messages
+                        </span>
+                    </div>
+
+
+                    <template lwc:if={hasConversations}>
+                        <div class="customer-table">
+                            <lightning-datatable
+                                key-field="Id"
+                                data={conversationRows}
+                                columns={conversationColumns}
+                                hide-checkbox-column
+                                onrowaction={handleConversationAction}>
+                            </lightning-datatable>
+                        </div>
+                    </template>
+
+
+                    <template lwc:else>
+                        <div class="empty-state">
+                            No previous email conversations found.
+                        </div>
+                    </template>
+
+                </div>
+
+            </template>
+
+
+            <!-- NO ACCOUNT -->
+            <template lwc:else>
+                <div class="warning-state">
+                    No Account is linked to this Case.
+                </div>
+            </template>
+
+        </div>
+    </div>
+</template>
