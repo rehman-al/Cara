@@ -8,7 +8,7 @@
         <locationX>0</locationX>
         <locationY>0</locationY>
         <defaultConnector>
-            <targetReference>Create_Account_From_Case</targetReference>
+            <targetReference>Get_Person_Account_Record_Type</targetReference>
         </defaultConnector>
         <defaultConnectorLabel>No Matching Account</defaultConnectorLabel>
         <rules>
@@ -27,8 +27,18 @@
             <label>Account Found</label>
         </rules>
     </decisions>
-    <description>When a Case is created with a Supplied Email, links it to the Account whose Email__c matches. If no matching Account exists, creates a new Account from the Case's supplied details (Name = SuppliedName, Email__c = SuppliedEmail) and links the Case to it.</description>
+    <description>When a Case is created with a Supplied Email, links it to the Account whose Email__c matches. If no matching Account exists, creates a new Person Account from the Case's supplied details (FirstName/LastName split from SuppliedName, Email__c and PersonEmail = SuppliedEmail) and links the Case to it.</description>
     <environments>Default</environments>
+    <formulas>
+        <name>New_Account_First_Name</name>
+        <dataType>String</dataType>
+        <expression>IF(CONTAINS({!$Record.SuppliedName}, " "), LEFT({!$Record.SuppliedName}, FIND(" ", {!$Record.SuppliedName}) - 1), "")</expression>
+    </formulas>
+    <formulas>
+        <name>New_Account_Last_Name</name>
+        <dataType>String</dataType>
+        <expression>IF(CONTAINS({!$Record.SuppliedName}, " "), MID({!$Record.SuppliedName}, FIND(" ", {!$Record.SuppliedName}) + 1, 100), {!$Record.SuppliedName})</expression>
+    </formulas>
     <interviewLabel>Link Case To Account By Email {!$Flow.CurrentDateTime}</interviewLabel>
     <label>Link Case To Account By Email</label>
     <processMetadataValues>
@@ -59,9 +69,21 @@
             <targetReference>Update_Case_With_New_Account</targetReference>
         </connector>
         <inputAssignments>
-            <field>Name</field>
+            <field>RecordTypeId</field>
             <value>
-                <elementReference>$Record.SuppliedName</elementReference>
+                <elementReference>Get_Person_Account_Record_Type.Id</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>FirstName</field>
+            <value>
+                <elementReference>New_Account_First_Name</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>LastName</field>
+            <value>
+                <elementReference>New_Account_Last_Name</elementReference>
             </value>
         </inputAssignments>
         <inputAssignments>
@@ -70,9 +92,43 @@
                 <elementReference>$Record.SuppliedEmail</elementReference>
             </value>
         </inputAssignments>
+        <inputAssignments>
+            <field>PersonEmail</field>
+            <value>
+                <elementReference>$Record.SuppliedEmail</elementReference>
+            </value>
+        </inputAssignments>
         <object>Account</object>
         <storeOutputAutomatically>true</storeOutputAutomatically>
     </recordCreates>
+    <recordLookups>
+        <name>Get_Person_Account_Record_Type</name>
+        <label>Get Person Account Record Type</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Create_Account_From_Case</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>SobjectType</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>Account</stringValue>
+            </value>
+        </filters>
+        <filters>
+            <field>DeveloperName</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>PersonAccount</stringValue>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>RecordType</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
     <recordLookups>
         <name>Get_Account_By_Email</name>
         <label>Get Account By Email</label>
