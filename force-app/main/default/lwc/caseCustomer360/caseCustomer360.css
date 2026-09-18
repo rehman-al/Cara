@@ -70,6 +70,111 @@
 }
 
 
+.customer-badges {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    gap: 0.4rem;
+
+    margin-top: 0.5rem;
+}
+
+
+.badge {
+    display: inline-flex;
+
+    align-items: center;
+
+    padding: 0.15rem 0.6rem;
+
+    border-radius: 12px;
+
+    font-size: 0.7rem;
+
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+
+.badge-vip {
+    background: #fff0d6;
+    color: #8a5700;
+}
+
+
+.badge-tag {
+    background: #e3f0ff;
+    color: #0b5394;
+}
+
+
+.badge-repeat {
+    background: #eaf6ea;
+    color: #2e7d32;
+}
+
+
+.badge-kyc {
+    background: #eee7fb;
+    color: #5a3ea3;
+}
+
+
+.status-pill {
+    display: inline-flex;
+
+    align-items: center;
+
+    padding: 0.15rem 0.6rem;
+
+    border-radius: 12px;
+
+    font-size: 0.75rem;
+
+    font-weight: 600;
+
+    white-space: nowrap;
+}
+
+
+.status-pill-success {
+    background: #eaf6ea;
+    color: #2e7d32;
+}
+
+
+.status-pill-neutral {
+    background: #f3f3f3;
+    color: #575757;
+}
+
+
+.status-pill-bronze {
+    background: #f2e3d5;
+    color: #7a4a1f;
+}
+
+
+.status-pill-silver {
+    background: #e8e8e8;
+    color: #555555;
+}
+
+
+.status-pill-gold {
+    background: #fdecc8;
+    color: #8a6300;
+}
+
+
+.status-pill-platinum {
+    background: #ece4fb;
+    color: #5a3ea3;
+}
+
+
 .section-title {
     font-size: 1rem;
 
@@ -83,7 +188,7 @@
     display: grid;
 
     grid-template-columns:
-        repeat(5, 1fr);
+        repeat(4, 1fr);
 
     gap: 0.75rem;
 
@@ -151,6 +256,11 @@
     gap: 1rem;
 
     margin-bottom: 1.5rem;
+}
+
+
+.information-grid-single {
+    grid-template-columns: 1fr;
 }
 
 

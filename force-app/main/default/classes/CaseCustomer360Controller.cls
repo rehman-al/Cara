@@ -23,7 +23,6 @@ public with sharing class CaseCustomer360Controller {
                 Id,
                 CaseNumber,
                 AccountId,
-                ContactId,
                 Subject,
                 Status,
                 Priority
@@ -51,7 +50,7 @@ public with sharing class CaseCustomer360Controller {
 
 
         // ACCOUNT
-        result.account = [
+        Account acct = [
             SELECT
                 Id,
                 Name,
@@ -59,37 +58,32 @@ public with sharing class CaseCustomer360Controller {
                 Type,
                 Website,
                 External_ID__c,
-                Is_Guest__c
+                Is_Guest__c,
+                CreatedDate,
+                KYC_Completed__c,
+                VIP_Status__c,
+                Customer_Tier__c,
+                Customer_Tags__c,
+                Loyalty_Tier_Benefits__c,
+                Customer_Lifetime_Spend__c,
+                Number_of_Orders__c,
+                Average_Order_Value__c,
+                First_Order_Date__c,
+                Preferred_Currency__c,
+                PersonEmail,
+                PersonMobilePhone,
+                PersonHomePhone,
+                PersonMailingStreet,
+                PersonMailingCity,
+                PersonMailingState,
+                PersonMailingPostalCode,
+                PersonMailingCountry
             FROM Account
             WHERE Id = :accountId
             LIMIT 1
         ];
 
-
-        // CONTACT
-        if (currentCase.ContactId != null) {
-
-            List<Contact> contacts = [
-                SELECT
-                    Id,
-                    Name,
-                    Email,
-                    Phone,
-                    MobilePhone,
-                    AccountId
-                FROM Contact
-                WHERE Id =
-                    :currentCase.ContactId
-                LIMIT 1
-            ];
-
-
-            if (!contacts.isEmpty()) {
-
-                result.contact =
-                    contacts[0];
-            }
-        }
+        result.account = acct;
 
 
         // ORDER HISTORY
@@ -111,52 +105,19 @@ public with sharing class CaseCustomer360Controller {
         ];
 
 
-        // TOTAL ORDERS
-        result.totalOrders = [
-            SELECT COUNT()
-            FROM Order
-            WHERE AccountId = :accountId
-        ];
+        // ORDER METRICS come from the Account roll-up fields maintained by
+        // OrderCustomerMetricsTrigger, not recalculated here.
+        result.totalOrders = acct.Number_of_Orders__c == null
+            ? 0
+            : acct.Number_of_Orders__c.intValue();
 
+        result.lifetimeValue = acct.Customer_Lifetime_Spend__c == null
+            ? 0
+            : acct.Customer_Lifetime_Spend__c;
 
-        // COMPLETED = DELIVERED
-        result.completedOrders = [
-            SELECT COUNT()
-            FROM Order
-            WHERE AccountId = :accountId
-            AND Shipping_Status__c =
-                'Delivered'
-        ];
-
-
-        // AED LTV
-        List<AggregateResult> ltvResults = [
-            SELECT
-                SUM(TotalAmount) totalLtv
-            FROM Order
-            WHERE AccountId = :accountId
-            AND Shipping_Status__c =
-                'Delivered'
-            AND CurrencyIsoCode__c =
-                'AED'
-        ];
-
-
-        if (
-            !ltvResults.isEmpty() &&
-            ltvResults[0].get('totalLtv')
-                != null
-        ) {
-
-            result.lifetimeValue =
-                (Decimal)
-                ltvResults[0]
-                    .get('totalLtv');
-
-        } else {
-
-            result.lifetimeValue = 0;
-        }
+        result.averageOrderValue = acct.Average_Order_Value__c == null
+            ? 0
+            : acct.Average_Order_Value__c;
 
 
         // PREVIOUS CASES
@@ -257,13 +218,6 @@ public with sharing class CaseCustomer360Controller {
 
 
         @AuraEnabled
-        public Contact contact {
-            get;
-            set;
-        }
-
-
-        @AuraEnabled
         public List<Order> orders {
             get;
             set;
@@ -292,13 +246,6 @@ public with sharing class CaseCustomer360Controller {
 
 
         @AuraEnabled
-        public Integer completedOrders {
-            get;
-            set;
-        }
-
-
-        @AuraEnabled
         public Integer totalCases {
             get;
             set;
@@ -307,6 +254,13 @@ public with sharing class CaseCustomer360Controller {
 
         @AuraEnabled
         public Decimal lifetimeValue {
+            get;
+            set;
+        }
+
+
+        @AuraEnabled
+        public Decimal averageOrderValue {
             get;
             set;
         }
@@ -324,9 +278,9 @@ public with sharing class CaseCustomer360Controller {
                 new List<EmailMessage>();
 
             totalOrders = 0;
-            completedOrders = 0;
             totalCases = 0;
             lifetimeValue = 0;
+            averageOrderValue = 0;
         }
     }
 }

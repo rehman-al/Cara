@@ -19,6 +19,18 @@
                     <div class="customer-subtitle">
                         Complete customer context for this Case
                     </div>
+
+                    <template lwc:if={hasBadges}>
+                        <div class="customer-badges">
+                            <template for:each={badges} for:item="badge">
+                                <span
+                                    key={badge.key}
+                                    class={badge.cssClass}>
+                                    {badge.label}
+                                </span>
+                            </template>
+                        </div>
+                    </template>
                 </div>
             </div>
 
@@ -64,25 +76,14 @@
 
                     <div class="metric-card">
                         <span class="metric-label">
-                            Customer Status
-                        </span>
-
-                        <span class="metric-value-small">
-                            {customerStatus}
-                        </span>
-                    </div>
-
-
-                    <div class="metric-card">
-                        <span class="metric-label">
-                            AED Lifetime Value
+                            Lifetime Value
                         </span>
 
                         <span class="metric-value">
                             <lightning-formatted-number
                                 value={lifetimeValue}
                                 format-style="currency"
-                                currency-code="AED">
+                                currency-code={preferredCurrency}>
                             </lightning-formatted-number>
                         </span>
                     </div>
@@ -101,32 +102,40 @@
 
                     <div class="metric-card">
                         <span class="metric-label">
-                            Completed Orders
+                            Average Order Value
                         </span>
 
                         <span class="metric-value">
-                            {completedOrders}
+                            <lightning-formatted-number
+                                value={averageOrderValue}
+                                format-style="currency"
+                                currency-code={preferredCurrency}>
+                            </lightning-formatted-number>
                         </span>
                     </div>
 
 
                     <div class="metric-card">
                         <span class="metric-label">
-                            Latest Shipping Status
+                            Customer Since
                         </span>
 
                         <span class="metric-value-small">
-                            {latestShippingStatus}
+                            <lightning-formatted-date-time
+                                value={customerSince}
+                                year="numeric"
+                                month="short"
+                                day="2-digit">
+                            </lightning-formatted-date-time>
                         </span>
                     </div>
 
                 </div>
 
 
-                <!-- ACCOUNT + CONTACT -->
-                <div class="information-grid">
+                <!-- ACCOUNT -->
+                <div class="information-grid information-grid-single">
 
-                    <!-- ACCOUNT -->
                     <div class="info-card">
 
                         <div class="info-card-header">
@@ -152,7 +161,15 @@
                         </div>
 
 
-                       
+                        <div class="field-row">
+                            <span class="field-label">
+                                Email
+                            </span>
+
+                            <lightning-formatted-email
+                                value={personEmail}>
+                            </lightning-formatted-email>
+                        </div>
 
 
                         <div class="field-row">
@@ -162,6 +179,45 @@
 
                             <span class="field-value">
                                 {accountPhone}
+                            </span>
+                        </div>
+
+
+                        <div class="field-row">
+                            <span class="field-label">
+                                Mobile
+                            </span>
+
+                            <span class="field-value">
+                                {personMobile}
+                            </span>
+                        </div>
+
+
+                        <template lwc:if={hasAccountAddress}>
+                            <div class="field-row">
+                                <span class="field-label">
+                                    Address
+                                </span>
+
+                                <lightning-formatted-address
+                                    street={accountStreet}
+                                    city={accountCity}
+                                    province={accountState}
+                                    postal-code={accountPostalCode}
+                                    country={accountCountry}>
+                                </lightning-formatted-address>
+                            </div>
+                        </template>
+
+
+                        <div class="field-row">
+                            <span class="field-label">
+                                Currency
+                            </span>
+
+                            <span class="field-value">
+                                {preferredCurrency}
                             </span>
                         </div>
 
@@ -187,77 +243,38 @@
                             </span>
                         </div>
 
-                    </div>
 
+                        <div class="field-row">
+                            <span class="field-label">
+                                Account Tier
+                            </span>
 
-                    <!-- CONTACT -->
-                    <div class="info-card">
-
-                        <div class="info-card-header">
-                            <lightning-icon
-                                icon-name="standard:contact"
-                                size="small">
-                            </lightning-icon>
-
-                            <span>Contact Information</span>
+                            <span class={accountTierClass}>
+                                {accountTier}
+                            </span>
                         </div>
 
 
-                        <template lwc:if={hasContact}>
+                        <div class="field-row">
+                            <span class="field-label">
+                                Loyalty Tier Benefits
+                            </span>
 
-                            <div class="field-row">
-                                <span class="field-label">
-                                    Contact Name
-                                </span>
-
-                                <lightning-button
-                                    variant="base"
-                                    label={contact.Name}
-                                    onclick={openContact}>
-                                </lightning-button>
-                            </div>
+                            <span class="field-value">
+                                {loyaltyTierBenefits}
+                            </span>
+                        </div>
 
 
-                            <div class="field-row">
-                                <span class="field-label">
-                                    Email
-                                </span>
+                        <div class="field-row">
+                            <span class="field-label">
+                                KYC Status
+                            </span>
 
-                                <lightning-formatted-email
-                                    value={contact.Email}>
-                                </lightning-formatted-email>
-                            </div>
-
-
-                            <div class="field-row">
-                                <span class="field-label">
-                                    Phone
-                                </span>
-
-                                <span class="field-value">
-                                    {contactPhone}
-                                </span>
-                            </div>
-
-
-                            <div class="field-row">
-                                <span class="field-label">
-                                    Mobile
-                                </span>
-
-                                <span class="field-value">
-                                    {contactMobile}
-                                </span>
-                            </div>
-
-                        </template>
-
-
-                        <template lwc:else>
-                            <div class="empty-state">
-                                No Contact is linked to this Case.
-                            </div>
-                        </template>
+                            <span class={kycBadgeClass}>
+                                {kycStatusLabel}
+                            </span>
+                        </div>
 
                     </div>
 

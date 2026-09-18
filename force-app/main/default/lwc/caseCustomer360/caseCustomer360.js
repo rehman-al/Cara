@@ -192,16 +192,6 @@ export default class CaseCustomer360
     }
 
 
-    get contact() {
-        return this.data?.contact;
-    }
-
-
-    get hasContact() {
-        return !!this.contact;
-    }
-
-
     get accountName() {
         return this.account?.Name ||
             'Not Available';
@@ -231,15 +221,165 @@ get customerStatus() {
 }
 
 
-    get contactPhone() {
-        return this.contact?.Phone ||
+    get customerTags() {
+        return this.account?.Customer_Tags__c ||
+            'Not a Valid Customer';
+    }
+
+
+    get kycVerified() {
+        return !!this.account?.KYC_Completed__c;
+    }
+
+
+    get kycStatusLabel() {
+        return this.kycVerified
+            ? 'Verified'
+            : 'Not Verified';
+    }
+
+
+    get kycBadgeClass() {
+        return this.kycVerified
+            ? 'status-pill status-pill-success'
+            : 'status-pill status-pill-neutral';
+    }
+
+
+    get accountTier() {
+        return this.account?.Customer_Tier__c ||
+            'Not Set';
+    }
+
+
+    get accountTierClass() {
+        const tierClasses = {
+            Bronze: 'status-pill status-pill-bronze',
+            Silver: 'status-pill status-pill-silver',
+            Gold: 'status-pill status-pill-gold',
+            Platinum: 'status-pill status-pill-platinum'
+        };
+
+        return tierClasses[this.account?.Customer_Tier__c] ||
+            'status-pill status-pill-neutral';
+    }
+
+
+    get loyaltyTierBenefits() {
+        return this.account?.Loyalty_Tier_Benefits__c ||
+            'No benefits recorded yet.';
+    }
+
+
+    get customerSince() {
+        return this.account?.First_Order_Date__c ||
+            this.account?.CreatedDate ||
+            null;
+    }
+
+
+    get preferredCurrency() {
+        return this.account?.Preferred_Currency__c ||
+            'AED';
+    }
+
+
+    get personEmail() {
+        return this.account?.PersonEmail ||
             'Not Available';
     }
 
 
-    get contactMobile() {
-        return this.contact?.MobilePhone ||
+    get personMobile() {
+        return this.account?.PersonMobilePhone ||
             'Not Available';
+    }
+
+
+    get accountStreet() {
+        return this.account?.PersonMailingStreet;
+    }
+
+
+    get accountCity() {
+        return this.account?.PersonMailingCity;
+    }
+
+
+    get accountState() {
+        return this.account?.PersonMailingState;
+    }
+
+
+    get accountPostalCode() {
+        return this.account?.PersonMailingPostalCode;
+    }
+
+
+    get accountCountry() {
+        return this.account?.PersonMailingCountry;
+    }
+
+
+    get hasAccountAddress() {
+        return !!(
+            this.accountStreet ||
+            this.accountCity ||
+            this.accountState ||
+            this.accountCountry
+        );
+    }
+
+
+    get isRepeatCustomer() {
+        return this.totalOrders > 1;
+    }
+
+
+    get badges() {
+        const chips = [];
+
+        if (this.account?.VIP_Status__c) {
+            chips.push({
+                key: 'vip',
+                label: 'VIP',
+                cssClass: 'badge badge-vip'
+            });
+        }
+
+        if (
+            this.customerTags &&
+            this.customerTags !== 'Not a Valid Customer'
+        ) {
+            chips.push({
+                key: 'tag',
+                label: this.customerTags,
+                cssClass: 'badge badge-tag'
+            });
+        }
+
+        if (this.isRepeatCustomer) {
+            chips.push({
+                key: 'repeat',
+                label: 'Repeat Customer',
+                cssClass: 'badge badge-repeat'
+            });
+        }
+
+        if (this.kycVerified) {
+            chips.push({
+                key: 'kyc',
+                label: 'KYC Verified',
+                cssClass: 'badge badge-kyc'
+            });
+        }
+
+        return chips;
+    }
+
+
+    get hasBadges() {
+        return this.badges.length > 0;
     }
 
 
@@ -278,29 +418,18 @@ get customerStatus() {
     }
 
 
-    get completedOrders() {
-        return this.data?.completedOrders || 0;
-    }
-
-
     get lifetimeValue() {
         return this.data?.lifetimeValue || 0;
     }
 
 
-    get totalCases() {
-        return this.data?.totalCases || 0;
+    get averageOrderValue() {
+        return this.data?.averageOrderValue || 0;
     }
 
 
-    get latestShippingStatus() {
-
-        if (!this.orders.length) {
-            return 'No Orders';
-        }
-
-        return this.orders[0].Shipping_Status__c ||
-            'Not Available';
+    get totalCases() {
+        return this.data?.totalCases || 0;
     }
 
 
@@ -386,18 +515,6 @@ get customerStatus() {
             this.navigateToRecord(
                 this.account.Id,
                 'Account'
-            );
-        }
-    }
-
-
-    openContact() {
-
-        if (this.contact?.Id) {
-
-            this.navigateToRecord(
-                this.contact.Id,
-                'Contact'
             );
         }
     }
