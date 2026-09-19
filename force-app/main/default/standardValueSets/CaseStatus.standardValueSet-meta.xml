@@ -74,9 +74,201 @@
         <closed>false</closed>
     </standardValue>
     <standardValue>
+        <fullName>Unread</fullName>
+        <default>false</default>
+        <label>Unread</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Awaiting Documents</fullName>
+        <default>false</default>
+        <label>Awaiting Documents</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Opened</fullName>
+        <default>false</default>
+        <label>Opened</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Answer</fullName>
+        <default>false</default>
+        <label>Answer</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>In-Progress</fullName>
+        <default>false</default>
+        <label>In-Progress</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Completed</fullName>
+        <default>false</default>
+        <label>Completed</label>
+        <closed>true</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>ID Validated</fullName>
+        <default>false</default>
+        <label>ID Validated</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Verified</fullName>
+        <default>false</default>
+        <label>Verified</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>No Verified</fullName>
+        <default>false</default>
+        <label>No Verified</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Order confirmed</fullName>
+        <default>false</default>
+        <label>Order confirmed</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Cancelled</fullName>
+        <default>false</default>
+        <label>Cancelled</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Refund completed</fullName>
+        <default>false</default>
+        <label>Refund completed</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Refund In Progress</fullName>
+        <default>false</default>
+        <label>Refund In Progress</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Rejected</fullName>
+        <default>false</default>
+        <label>Rejected</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>PEP Form</fullName>
+        <default>false</default>
+        <label>PEP Form</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
         <fullName>Closed</fullName>
         <default>false</default>
         <label>Closed</label>
         <closed>true</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Under discussion</fullName>
+        <default>false</default>
+        <label>Under discussion</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>CAD design sent</fullName>
+        <default>false</default>
+        <label>CAD design sent</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>CAD design confirmed</fullName>
+        <default>false</default>
+        <label>CAD design confirmed</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Certificate sent</fullName>
+        <default>false</default>
+        <label>Certificate sent</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Deposit requested</fullName>
+        <default>false</default>
+        <label>Deposit requested</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Deposit received</fullName>
+        <default>false</default>
+        <label>Deposit received</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Order created by customer</fullName>
+        <default>false</default>
+        <label>Order created by customer</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Order form created</fullName>
+        <default>false</default>
+        <label>Order form created</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Order sent to factory</fullName>
+        <default>false</default>
+        <label>Order sent to factory</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Order ready in factory</fullName>
+        <default>false</default>
+        <label>Order ready in factory</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Order received from factory</fullName>
+        <default>false</default>
+        <label>Order received from factory</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Picture sent to customer</fullName>
+        <default>false</default>
+        <label>Picture sent to customer</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Product confirmed</fullName>
+        <default>false</default>
+        <label>Product confirmed</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Full payment received</fullName>
+        <default>false</default>
+        <label>Full payment received</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Order shipped</fullName>
+        <default>false</default>
+        <label>Order shipped</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Product not confirmed</fullName>
+        <default>false</default>
+        <label>Product not confirmed</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Modifications ongoing</fullName>
+        <default>false</default>
+        <label>Modifications ongoing</label>
+        <closed>false</closed>
     </standardValue>
 </StandardValueSet>
