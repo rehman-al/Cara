@@ -16,7 +16,7 @@ private class CaseCustomProductControllerTest {
             caseRecord.Id,
             new Custom_Product_Request__c(
                 Product_Name__c = 'Configured Widget',
-                Category__c = 'Custom',
+                Category__c = 'Ring',
                 Quantity__c = 2,
                 Estimated_Cost__c = 10,
                 Selling_Price__c = 15,
@@ -27,7 +27,7 @@ private class CaseCustomProductControllerTest {
             caseRecord.Id,
             new Custom_Product_Request__c(
                 Product_Name__c = 'Implementation Service',
-                Category__c = 'Service',
+                Category__c = 'Bracelet',
                 Quantity__c = 1
             )
         );
@@ -54,6 +54,42 @@ private class CaseCustomProductControllerTest {
             CaseCustomProductController.getRequests(caseRecord.Id).size(),
             'Delete should remove only the selected request.'
         );
+    }
+
+    @IsTest
+    static void savesJewelrySpecificFields() {
+        Case caseRecord = [SELECT Id FROM Case LIMIT 1];
+
+        Test.startTest();
+        Custom_Product_Request__c created = CaseCustomProductController.createRequest(
+            caseRecord.Id,
+            new Custom_Product_Request__c(
+                Product_Name__c = 'Solitaire Ring',
+                Category__c = 'Ring',
+                Quantity__c = 1,
+                Size__c = '7',
+                Metal__c = 'Platinum',
+                Diamond_Carat__c = 1.25,
+                Diamond_Shape__c = 'Round',
+                Diamond_Type__c = 'Natural',
+                Certification_Type_Requested__c = 'GIA'
+            )
+        );
+        Test.stopTest();
+
+        Assert.areEqual('7', created.Size__c);
+        Assert.areEqual('Platinum', created.Metal__c);
+        Assert.areEqual(1.25, created.Diamond_Carat__c);
+        Assert.areEqual('Round', created.Diamond_Shape__c);
+        Assert.areEqual('Natural', created.Diamond_Type__c);
+        Assert.areEqual('GIA', created.Certification_Type_Requested__c);
+
+        created.Size__c = '7.5';
+        created.Metal__c = 'Yellow Gold';
+        Custom_Product_Request__c updated = CaseCustomProductController.updateRequest(created);
+
+        Assert.areEqual('7.5', updated.Size__c);
+        Assert.areEqual('Yellow Gold', updated.Metal__c);
     }
 
     @IsTest

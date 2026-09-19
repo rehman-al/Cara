@@ -64,7 +64,33 @@ const NEW_REQUEST = {
     Estimated_Cost__c: null,
     Selling_Price__c: null,
     Status__c: 'Draft',
-    Product__c: null
+    Product__c: null,
+    Size__c: '',
+    Metal__c: '',
+    Diamond_Carat__c: null,
+    Diamond_Shape__c: '',
+    Diamond_Type__c: '',
+    Certification_Type_Requested__c: ''
+};
+
+const SIZE_OPTIONS_BY_CATEGORY = {
+    Ring: [
+        '3', '3.5', '4', '4.5', '5', '5.5', '6', '6.5', '7', '7.5',
+        '8', '8.5', '9', '9.5', '10', '10.5', '11', '11.5', '12', '12.5', '13'
+    ],
+    Bracelet: ['6"', '6.5"', '7"', '7.5"', '8"', '8.5"', '9"'],
+    Anklet: ['8"', '8.5"', '9"', '9.5"', '10"', '10.5"', '11"'],
+    Necklace: [
+        '14"', '16"', '18"', '20"', '22"', '24"',
+        '26"', '28"', '30"', '32"', '34"', '36"'
+    ],
+    Chain: [
+        '14"', '16"', '18"', '20"', '22"', '24"',
+        '26"', '28"', '30"', '32"', '34"', '36"'
+    ],
+    Earring: ['10mm', '12mm', '15mm', '20mm', '25mm', '30mm', '35mm', '40mm', '45mm', '50mm'],
+    Watch: ['34mm', '36mm', '38mm', '40mm', '42mm', '44mm', '46mm'],
+    Pendant: ['Small', 'Medium', 'Large', 'Extra Large']
 };
 
 export default class CaseCustomProductManager extends NavigationMixin(
@@ -94,10 +120,14 @@ export default class CaseCustomProductManager extends NavigationMixin(
     wiredRequestsResult;
 
     categoryOptions = [
-        'Product',
-        'Service',
-        'Custom',
-        'Other'
+        'Ring',
+        'Bracelet',
+        'Necklace',
+        'Earring',
+        'Pendant',
+        'Watch',
+        'Anklet',
+        'Chain'
     ].map((value) => ({
         label: value,
         value
@@ -112,6 +142,69 @@ export default class CaseCustomProductManager extends NavigationMixin(
         label: value,
         value
     }));
+
+    metalOptions = [
+        'Yellow Gold',
+        'White Gold',
+        'Rose Gold',
+        'Platinum',
+        'Silver',
+        'Titanium',
+        'Palladium'
+    ].map((value) => ({
+        label: value,
+        value
+    }));
+
+    diamondShapeOptions = [
+        'Round',
+        'Princess',
+        'Cushion',
+        'Oval',
+        'Emerald',
+        'Pear',
+        'Marquise',
+        'Radiant',
+        'Asscher',
+        'Heart'
+    ].map((value) => ({
+        label: value,
+        value
+    }));
+
+    diamondTypeOptions = [
+        'Natural',
+        'Lab-Grown',
+        'Moissanite'
+    ].map((value) => ({
+        label: value,
+        value
+    }));
+
+    certificationOptions = [
+        'GIA',
+        'IGI',
+        'AGS',
+        'GSI',
+        'None'
+    ].map((value) => ({
+        label: value,
+        value
+    }));
+
+    get sizeOptions() {
+        const values =
+            SIZE_OPTIONS_BY_CATEGORY[this.draft.Category__c] || [];
+
+        return values.map((value) => ({
+            label: value,
+            value
+        }));
+    }
+
+    get isSizeDisabled() {
+        return !this.draft.Category__c;
+    }
 
     @wire(getRequests, { caseId: '$recordId' })
     wiredRequests(result) {
@@ -188,9 +281,12 @@ export default class CaseCustomProductManager extends NavigationMixin(
                 ? this.numberOrNull(rawValue)
                 : rawValue;
 
+        const fieldName = event.target.name;
+
         this.draft = {
             ...this.draft,
-            [event.target.name]: value
+            [fieldName]: value,
+            ...(fieldName === 'Category__c' ? { Size__c: '' } : {})
         };
     }
 

@@ -75,9 +75,27 @@
                             <lightning-combobox
                                 data-form-field
                                 name="Category__c"
-                                label="Category"
+                                label="Product Category"
                                 value={draft.Category__c}
                                 options={categoryOptions}
+                                onchange={handleFieldChange}
+                            ></lightning-combobox>
+                            <lightning-combobox
+                                data-form-field
+                                name="Size__c"
+                                label="Size"
+                                placeholder="Select a Product Category first"
+                                value={draft.Size__c}
+                                options={sizeOptions}
+                                disabled={isSizeDisabled}
+                                onchange={handleFieldChange}
+                            ></lightning-combobox>
+                            <lightning-combobox
+                                data-form-field
+                                name="Metal__c"
+                                label="Metal"
+                                value={draft.Metal__c}
+                                options={metalOptions}
                                 onchange={handleFieldChange}
                             ></lightning-combobox>
                             <lightning-input
@@ -144,6 +162,41 @@
                                 message-when-range-underflow="Selling Price cannot be negative."
                                 onchange={handleFieldChange}
                             ></lightning-input>
+                            <lightning-input
+                                data-form-field
+                                name="Diamond_Carat__c"
+                                type="number"
+                                label="Diamond Carat"
+                                value={draft.Diamond_Carat__c}
+                                min="0"
+                                step="0.01"
+                                message-when-range-underflow="Diamond Carat cannot be negative."
+                                onchange={handleFieldChange}
+                            ></lightning-input>
+                            <lightning-combobox
+                                data-form-field
+                                name="Diamond_Shape__c"
+                                label="Diamond Shape"
+                                value={draft.Diamond_Shape__c}
+                                options={diamondShapeOptions}
+                                onchange={handleFieldChange}
+                            ></lightning-combobox>
+                            <lightning-combobox
+                                data-form-field
+                                name="Diamond_Type__c"
+                                label="Diamond Type"
+                                value={draft.Diamond_Type__c}
+                                options={diamondTypeOptions}
+                                onchange={handleFieldChange}
+                            ></lightning-combobox>
+                            <lightning-combobox
+                                data-form-field
+                                name="Certification_Type_Requested__c"
+                                label="Certification Type Requested"
+                                value={draft.Certification_Type_Requested__c}
+                                options={certificationOptions}
+                                onchange={handleFieldChange}
+                            ></lightning-combobox>
                             <lightning-textarea
                                 data-form-field
                                 name="Description__c"
@@ -154,7 +207,7 @@
                             <lightning-textarea
                                 data-form-field
                                 name="Requested_Specification__c"
-                                label="Requested Specification"
+                                label="Specific Design"
                                 value={draft.Requested_Specification__c}
                                 onchange={handleFieldChange}
                             ></lightning-textarea>

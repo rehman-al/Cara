@@ -1,10 +1,14 @@
 public with sharing class CaseCustomProductController {
 
     private static final Set<String> VALID_CATEGORIES = new Set<String>{
-        'Product',
-        'Service',
-        'Custom',
-        'Other'
+        'Ring',
+        'Bracelet',
+        'Necklace',
+        'Earring',
+        'Pendant',
+        'Watch',
+        'Anklet',
+        'Chain'
     };
 
     private static final Set<String> VALID_STATUSES = new Set<String>{
@@ -41,6 +45,12 @@ public with sharing class CaseCustomProductController {
                     Status__c,
                     Product__c,
                     Product__r.Name,
+                    Size__c,
+                    Metal__c,
+                    Diamond_Carat__c,
+                    Diamond_Shape__c,
+                    Diamond_Type__c,
+                    Certification_Type_Requested__c,
                     CreatedDate,
                     LastModifiedDate
                 FROM Custom_Product_Request__c
@@ -113,6 +123,24 @@ public with sharing class CaseCustomProductController {
                 String.isBlank(requestRecord.Status__c)
                     ? 'Draft'
                     : requestRecord.Status__c;
+
+            recordToInsert.Size__c =
+                requestRecord.Size__c;
+
+            recordToInsert.Metal__c =
+                requestRecord.Metal__c;
+
+            recordToInsert.Diamond_Carat__c =
+                requestRecord.Diamond_Carat__c;
+
+            recordToInsert.Diamond_Shape__c =
+                requestRecord.Diamond_Shape__c;
+
+            recordToInsert.Diamond_Type__c =
+                requestRecord.Diamond_Type__c;
+
+            recordToInsert.Certification_Type_Requested__c =
+                requestRecord.Certification_Type_Requested__c;
 
             recordToInsert.Product__c = resolveOrCreateProduct(
                 requestRecord.Product__c,
@@ -246,6 +274,24 @@ public with sharing class CaseCustomProductController {
                 String.isBlank(requestRecord.Status__c)
                     ? 'Draft'
                     : requestRecord.Status__c;
+
+            recordToUpdate.Size__c =
+                requestRecord.Size__c;
+
+            recordToUpdate.Metal__c =
+                requestRecord.Metal__c;
+
+            recordToUpdate.Diamond_Carat__c =
+                requestRecord.Diamond_Carat__c;
+
+            recordToUpdate.Diamond_Shape__c =
+                requestRecord.Diamond_Shape__c;
+
+            recordToUpdate.Diamond_Type__c =
+                requestRecord.Diamond_Type__c;
+
+            recordToUpdate.Certification_Type_Requested__c =
+                requestRecord.Certification_Type_Requested__c;
 
             recordToUpdate.Product__c = resolveOrCreateProduct(
                 requestRecord.Product__c,
@@ -515,6 +561,12 @@ public with sharing class CaseCustomProductController {
                     Status__c,
                     Product__c,
                     Product__r.Name,
+                    Size__c,
+                    Metal__c,
+                    Diamond_Carat__c,
+                    Diamond_Shape__c,
+                    Diamond_Type__c,
+                    Certification_Type_Requested__c,
                     CreatedDate,
                     LastModifiedDate
 
