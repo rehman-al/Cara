@@ -64,7 +64,7 @@
             <label>Existing KYC Case Found</label>
         </rules>
     </decisions>
-    <description>Creates a KYC Required case when an Order enters the KYC-required state. The case inherits the Order account and contact and includes key Order details. If a case already exists for the same KYC Order, the existing case is updated instead of creating a duplicate.</description>
+    <description>Creates a Compliance case when an Order enters the KYC-required state. The case inherits the Order account and contact and includes key Order details. If a case already exists for the same KYC Order, the existing case is updated instead of creating a duplicate.</description>
     <environments>Default</environments>
     <interviewLabel>Create KYC Case From Order {!$Flow.CurrentDateTime}</interviewLabel>
     <label>Create KYC Case From Order</label>
@@ -143,7 +143,7 @@
         <inputAssignments>
             <field>Status</field>
             <value>
-                <stringValue>KYC Approval Pending</stringValue>
+                <stringValue>Opened</stringValue>
             </value>
         </inputAssignments>
         <inputAssignments>
@@ -208,7 +208,7 @@
     </recordLookups>
     <recordLookups>
         <name>Get_KYC_Required_Record_Type</name>
-        <label>Get KYC Required Record Type</label>
+        <label>Get Compliance Record Type</label>
         <locationX>0</locationX>
         <locationY>0</locationY>
         <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
@@ -220,7 +220,7 @@
             <field>DeveloperName</field>
             <operator>EqualTo</operator>
             <value>
-                <stringValue>KYC_Required</stringValue>
+                <stringValue>Compliance</stringValue>
             </value>
         </filters>
         <filters>

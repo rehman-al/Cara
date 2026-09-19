@@ -2,23 +2,8 @@
 <RecordType xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Compliance</fullName>
     <active>true</active>
-    <businessProcess>Standard Support Process</businessProcess>
+    <businessProcess>Compliance</businessProcess>
     <label>Compliance</label>
-    <picklistValues>
-        <picklist>Chat_Status__c</picklist>
-        <values>
-            <fullName>Customer Replied</fullName>
-            <default>false</default>
-        </values>
-        <values>
-            <fullName>Message sent to Customer</fullName>
-            <default>false</default>
-        </values>
-        <values>
-            <fullName>Not Started</fullName>
-            <default>false</default>
-        </values>
-    </picklistValues>
     <picklistValues>
         <picklist>Origin</picklist>
         <values>
@@ -62,40 +47,6 @@
         </values>
     </picklistValues>
     <picklistValues>
-        <picklist>Product_of_Interest__c</picklist>
-        <values>
-            <fullName>Cloud Storage</fullName>
-            <default>false</default>
-        </values>
-        <values>
-            <fullName>Hardware Training</fullName>
-            <default>false</default>
-        </values>
-        <values>
-            <fullName>Premium Support</fullName>
-            <default>false</default>
-        </values>
-        <values>
-            <fullName>Software License</fullName>
-            <default>false</default>
-        </values>
-    </picklistValues>
-    <picklistValues>
-        <picklist>Query_Category__c</picklist>
-        <values>
-            <fullName>Billing</fullName>
-            <default>false</default>
-        </values>
-        <values>
-            <fullName>Product Info</fullName>
-            <default>false</default>
-        </values>
-        <values>
-            <fullName>Shipping</fullName>
-            <default>false</default>
-        </values>
-    </picklistValues>
-    <picklistValues>
         <picklist>Reason</picklist>
         <values>
             <fullName>Complex functionality</fullName>
@@ -119,29 +70,6 @@
         </values>
     </picklistValues>
     <picklistValues>
-        <picklist>Sub_Category__c</picklist>
-        <values>
-            <fullName>Delivery Delay</fullName>
-            <default>false</default>
-        </values>
-        <values>
-            <fullName>Feature Request</fullName>
-            <default>false</default>
-        </values>
-        <values>
-            <fullName>Pricing</fullName>
-            <default>false</default>
-        </values>
-        <values>
-            <fullName>Refund</fullName>
-            <default>false</default>
-        </values>
-        <values>
-            <fullName>Tracking</fullName>
-            <default>false</default>
-        </values>
-    </picklistValues>
-    <picklistValues>
         <picklist>Type</picklist>
         <values>
             <fullName>Feature Request</fullName>
@@ -153,21 +81,6 @@
         </values>
         <values>
             <fullName>Question</fullName>
-            <default>false</default>
-        </values>
-    </picklistValues>
-    <picklistValues>
-        <picklist>Verification_Status__c</picklist>
-        <values>
-            <fullName>Failed</fullName>
-            <default>false</default>
-        </values>
-        <values>
-            <fullName>Pending</fullName>
-            <default>false</default>
-        </values>
-        <values>
-            <fullName>Verified</fullName>
             <default>false</default>
         </values>
     </picklistValues>

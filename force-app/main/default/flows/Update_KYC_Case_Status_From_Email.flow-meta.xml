@@ -53,7 +53,7 @@
             <label>KYC Email Sent</label>
         </rules>
     </decisions>
-    <description>Updates the status of a KYC Case when a sent or received EmailMessage is related to it. Only Cases linked to an Order through KYC_Order__c qualify.</description>
+    <description>Updates the status of a Case when a sent or received EmailMessage is related to it. Only Cases on the Compliance record type qualify.</description>
     <environments>Default</environments>
     <interviewLabel>Update KYC Case Status From Email {!$Flow.CurrentDateTime}</interviewLabel>
     <label>Update KYC Case Status From Email</label>
@@ -77,6 +77,34 @@
     </processMetadataValues>
     <processType>AutoLaunchedFlow</processType>
     <recordLookups>
+        <name>Get_Compliance_Record_Type</name>
+        <label>Get Compliance Record Type</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Get_KYC_Case</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>DeveloperName</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>Compliance</stringValue>
+            </value>
+        </filters>
+        <filters>
+            <field>SobjectType</field>
+            <operator>EqualTo</operator>
+            <value>
+                <stringValue>Case</stringValue>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>RecordType</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
+    <recordLookups>
         <name>Get_KYC_Case</name>
         <label>Get KYC Case</label>
         <locationX>0</locationX>
@@ -94,10 +122,10 @@
             </value>
         </filters>
         <filters>
-            <field>KYC_Order__c</field>
-            <operator>IsNull</operator>
+            <field>RecordTypeId</field>
+            <operator>EqualTo</operator>
             <value>
-                <booleanValue>false</booleanValue>
+                <elementReference>Get_Compliance_Record_Type.Id</elementReference>
             </value>
         </filters>
         <getFirstRecordOnly>true</getFirstRecordOnly>
@@ -120,7 +148,7 @@
         <inputAssignments>
             <field>Status</field>
             <value>
-                <stringValue>Customer Replied to KYC</stringValue>
+                <stringValue>Opened</stringValue>
             </value>
         </inputAssignments>
         <object>Case</object>
@@ -141,7 +169,7 @@
         <inputAssignments>
             <field>Status</field>
             <value>
-                <stringValue>KYC Requirement Sent to Customer</stringValue>
+                <stringValue>Awaiting Documents</stringValue>
             </value>
         </inputAssignments>
         <object>Case</object>
@@ -150,7 +178,7 @@
         <locationX>0</locationX>
         <locationY>0</locationY>
         <connector>
-            <targetReference>Get_KYC_Case</targetReference>
+            <targetReference>Get_Compliance_Record_Type</targetReference>
         </connector>
         <filterLogic>1 AND (2 OR 3)</filterLogic>
         <filters>
