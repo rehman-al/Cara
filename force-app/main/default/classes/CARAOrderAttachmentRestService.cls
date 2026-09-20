@@ -1,5 +1,28 @@
 @RestResource(urlMapping='/cara/orders/attachments')
 global with sharing class CARAOrderAttachmentRestService {
+    private static final String REST_API_VERSION = 'v67.0';
+
+    @HttpGet
+    global static void getAttachments() {
+        try {
+            String orderReferenceNumber = RestContext.request == null
+                ? null
+                : RestContext.request.params.get('orderReferenceNumber');
+
+            if (String.isBlank(orderReferenceNumber)) {
+                throw new IntegrationException('orderReferenceNumber is required.');
+            }
+
+            Order orderRecord = findOrder(orderReferenceNumber);
+            List<AttachmentSummary> attachmentSummaries = listAttachments(orderRecord.Id);
+
+            writeListResponse(200, true, 'Attachments retrieved successfully.', orderRecord.Id, attachmentSummaries);
+        } catch (IntegrationException exceptionRecord) {
+            writeListResponse(400, false, exceptionRecord.getMessage(), null, new List<AttachmentSummary>());
+        } catch (Exception exceptionRecord) {
+            writeListResponse(500, false, 'Unable to retrieve attachments.', null, new List<AttachmentSummary>());
+        }
+    }
 
     @HttpPost
     global static void createAttachments() {
@@ -130,6 +153,33 @@ global with sharing class CARAOrderAttachmentRestService {
         return contentDocumentIds;
     }
 
+    private static List<AttachmentSummary> listAttachments(Id orderId) {
+        Set<Id> contentDocumentIds = new Set<Id>();
+        for (ContentDocumentLink linkRecord : [
+            SELECT ContentDocumentId
+            FROM ContentDocumentLink
+            WHERE LinkedEntityId = :orderId
+        ]) {
+            contentDocumentIds.add(linkRecord.ContentDocumentId);
+        }
+
+        List<AttachmentSummary> attachmentSummaries = new List<AttachmentSummary>();
+        if (contentDocumentIds.isEmpty()) {
+            return attachmentSummaries;
+        }
+
+        for (ContentVersion version : [
+            SELECT Id, ContentDocumentId, Title, FileExtension, FileType, ContentSize, Description, CreatedDate
+            FROM ContentVersion
+            WHERE ContentDocumentId IN :contentDocumentIds
+            AND IsLatest = true
+            ORDER BY CreatedDate DESC
+        ]) {
+            attachmentSummaries.add(new AttachmentSummary(version));
+        }
+        return attachmentSummaries;
+    }
+
     private static void writeResponse(
         Integer statusCode,
         Boolean success,
@@ -151,11 +201,65 @@ global with sharing class CARAOrderAttachmentRestService {
         RestContext.response.responseBody = Blob.valueOf(JSON.serialize(responseBody));
     }
 
+    private static void writeListResponse(
+        Integer statusCode,
+        Boolean success,
+        String message,
+        Id orderId,
+        List<AttachmentSummary> attachments
+    ) {
+        if (RestContext.response == null) {
+            RestContext.response = new RestResponse();
+        }
+        AttachmentListResponse responseBody = new AttachmentListResponse();
+        responseBody.success = success;
+        responseBody.message = message;
+        responseBody.orderId = orderId;
+        responseBody.count = attachments.size();
+        responseBody.attachments = attachments;
+
+        RestContext.response.statusCode = statusCode;
+        RestContext.response.addHeader('Content-Type', 'application/json');
+        RestContext.response.responseBody = Blob.valueOf(JSON.serialize(responseBody));
+    }
+
     private class ResponseBody {
         public Boolean success;
         public String message;
         public Id orderId;
         public List<Id> contentDocumentIds;
+    }
+
+    private class AttachmentListResponse {
+        public Boolean success;
+        public String message;
+        public Id orderId;
+        public Integer count;
+        public List<AttachmentSummary> attachments;
+    }
+
+    private class AttachmentSummary {
+        public Id contentDocumentId;
+        public Id contentVersionId;
+        public String fileName;
+        public String fileExtension;
+        public String fileType;
+        public Integer contentSize;
+        public String description;
+        public Datetime createdDate;
+        public String downloadUrl;
+
+        private AttachmentSummary(ContentVersion version) {
+            this.contentDocumentId = version.ContentDocumentId;
+            this.contentVersionId = version.Id;
+            this.fileName = version.Title;
+            this.fileExtension = version.FileExtension;
+            this.fileType = version.FileType;
+            this.contentSize = version.ContentSize;
+            this.description = version.Description;
+            this.createdDate = version.CreatedDate;
+            this.downloadUrl = '/services/data/' + REST_API_VERSION + '/sobjects/ContentVersion/' + version.Id + '/VersionData';
+        }
     }
 
     private class IntegrationException extends Exception {
