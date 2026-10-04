@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Attribute_Wrapper_Name__c</fullName>
+    <description>Name of the attributes wrapper key Marketing Cloud expects for this template, e.g. &quot;OrderConfirmationInput&quot;. Left blank for templates that use the &quot;$content&quot; attribute shape instead.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Attribute Wrapper Name</label>
+    <length>80</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

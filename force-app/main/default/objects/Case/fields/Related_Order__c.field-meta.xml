@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Related_Order__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>The SFCC/MRT Order this Case is about. Independent of any other Case–Order link on this object (e.g. KYC) — populate it on any Case so the &quot;Product is Ready&quot; action knows which Order to request the N-Genius balance payment link (Link 2) for.</description>
+    <label>Related Order</label>
+    <referenceTo>Order</referenceTo>
+    <relationshipLabel>Cases (Related Order)</relationshipLabel>
+    <relationshipName>Related_Order_Cases</relationshipName>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

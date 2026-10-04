@@ -33,6 +33,7 @@
     <navType>Console</navType>
     <setupExperience>service</setupExperience>
     <tabs>standard-Case</tabs>
+    <tabs>Customisation_Option__c</tabs>
     <tabs>standard-Contact</tabs>
     <tabs>standard-Account</tabs>
     <tabs>Knowledge__kav</tabs>
@@ -50,6 +51,9 @@
     <uiType>Lightning</uiType>
     <utilityBar>LightningService_UtilityBar</utilityBar>
     <workspaceConfig>
+        <mappings>
+            <tab>Customisation_Option__c</tab>
+        </mappings>
         <mappings>
             <tab>Knowledge__kav</tab>
         </mappings>

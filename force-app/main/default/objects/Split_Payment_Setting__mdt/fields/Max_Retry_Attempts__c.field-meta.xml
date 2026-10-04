@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Max_Retry_Attempts__c</fullName>
+    <description>Total attempts (including the first) for a split-payment SFCC/MRT callout before a retryable failure (502 / network error) is surfaced. 1 means no retry. 400 and 401 are never retried regardless of this value.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Max Retry Attempts</label>
+    <precision>2</precision>
+    <required>true</required>
+    <scale>0</scale>
+    <type>Number</type>
+    <unique>false</unique>
+</CustomField>

@@ -1,0 +1,363 @@
+<template>
+    <div class="cr-shell" lang={locale} dir={direction}>
+        <header class="cr-header">
+            <p class="cr-eyebrow">{text.eyebrow}</p>
+            <template lwc:if={submitted}>
+                <h1 class="cr-heading">{text.submittedTitle}</h1>
+                <p class="cr-intro">{text.submittedIntro}</p>
+            </template>
+            <template lwc:else>
+                <h1 class="cr-heading">{text.title}</h1>
+                <p class="cr-intro">{text.intro}</p>
+            </template>
+        </header>
+
+        <template lwc:if={submitted}>
+            <section class="cr-confirmation" aria-label={text.confirmationAria}>
+                <span class="cr-check-badge" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M20 6 9 17l-5-5"></path>
+                    </svg>
+                </span>
+                <div class="cr-confirmation-copy">
+                    <p class="cr-eyebrow">{text.thankYou}</p>
+                    <h2 class="cr-confirmation-heading">{confirmationTitle}</h2>
+                    <p class="cr-intro">{text.confirmationBody}</p>
+                </div>
+                <template lwc:if={resultWarning}>
+                    <p class="cr-warning" role="alert">{resultWarning}</p>
+                </template>
+                <dl class="cr-summary-list">
+                    <template for:each={confirmationSummary} for:item="item">
+                        <div class="cr-summary-row" key={item.key}>
+                            <dt>{item.label}</dt>
+                            <dd>{item.value}</dd>
+                        </div>
+                    </template>
+                </dl>
+                <template lwc:if={hasStorefrontHomeUrl}>
+                    <a class="cr-home-link" href={storefrontHomeUrl} target="_top" rel="noopener noreferrer">
+                        {text.backHome}
+                    </a>
+                </template>
+            </section>
+        </template>
+
+        <template lwc:else>
+            <nav class="cr-stepper" aria-label={text.progressAria}>
+                <ol class="cr-step-list">
+                    <template for:each={stepperItems} for:item="item">
+                        <li class={item.cssClass} key={item.key}>
+                            <span class="cr-step-content">
+                                <span class="cr-step-number">{item.number}</span>
+                                <span class="cr-step-name">{item.label}</span>
+                            </span>
+                            <template lwc:if={item.showSeparator}>
+                                <span class={item.separatorClass} aria-hidden="true"></span>
+                            </template>
+                        </li>
+                    </template>
+                </ol>
+                <div class="cr-step-mobile">
+                    <div class="cr-step-mobile-labels">
+                        <span>{currentStepLabel}</span>
+                        <span>{stepProgressLabel}</span>
+                    </div>
+                    <div class="cr-progress-track">
+                        <div class="cr-progress-fill" style={progressPercent}></div>
+                    </div>
+                </div>
+            </nav>
+
+            <template lwc:if={submitError}>
+                <p class="cr-error-banner" role="alert">{submitError}</p>
+            </template>
+
+            <div class="cr-step-body">
+                <template lwc:if={isStep0}>
+                    <section class="cr-section">
+                        <p class="cr-question">{text.pieceQuestion}</p>
+                        <template lwc:if={optionsLoading}>
+                            <lightning-spinner alternative-text={text.loadingOptions} size="small"></lightning-spinner>
+                        </template>
+                        <template lwc:if={optionsError}>
+                            <p class="cr-error-banner" role="alert">{optionsError}</p>
+                        </template>
+                        <div class="cr-option-grid">
+                            <template for:each={pieceOptions} for:item="option">
+                                <button
+                                    type="button"
+                                    key={option.value}
+                                    class={option.cssClass}
+                                    data-value={option.value}
+                                    aria-pressed={option.selected}
+                                    onclick={handlePieceSelect}
+                                >
+                                    <span class="cr-option-mark" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M20 6 9 17l-5-5"></path>
+                                        </svg>
+                                    </span>
+                                    <span class="cr-option-title">{option.label}</span>
+                                    <span class="cr-option-blurb">{option.blurb}</span>
+                                </button>
+                            </template>
+                        </div>
+                    </section>
+                </template>
+
+                <template lwc:if={isStep1}>
+                    <section class="cr-section cr-section_vision">
+                        <div class="cr-field">
+                            <span class="cr-field-label">{text.shareIdea}</span>
+                            <div class="cr-segmented" role="group" aria-label={text.shareIdea}>
+                                <button
+                                    type="button"
+                                    class={uploadModeCssClass}
+                                    data-value="upload"
+                                    aria-pressed={isUploadMode}
+                                    onclick={handleBriefTypeChange}
+                                >
+                                    {text.uploadReference}
+                                </button>
+                                <button
+                                    type="button"
+                                    class={describeModeCssClass}
+                                    data-value="describe"
+                                    aria-pressed={isDescribeMode}
+                                    onclick={handleBriefTypeChange}
+                                >
+                                    {text.describeWords}
+                                </button>
+                            </div>
+                        </div>
+
+                        <template lwc:if={isUploadMode}>
+                            <div class="cr-field">
+                                <span class="cr-field-label">{text.referenceImage}</span>
+                                <template lwc:if={hasFile}>
+                                    <div class="cr-file-preview">
+                                        <img src={filePreviewUrl} alt={text.imageAlt} />
+                                        <span class="cr-file-name">{fileName}</span>
+                                        <button
+                                            type="button"
+                                            class="cr-file-remove"
+                                            aria-label={text.removeImage}
+                                            onclick={handleRemoveFile}
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                </template>
+                                <template lwc:else>
+                                    <label class="cr-dropzone">
+                                        <svg class="cr-upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+                                            <path d="M16 5h6"></path>
+                                            <path d="M19 2v6"></path>
+                                            <path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"></path>
+                                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                                            <circle cx="9" cy="9" r="2"></circle>
+                                        </svg>
+                                        <span class="cr-dropzone-title">{text.chooseImage}</span>
+                                        <span class="cr-dropzone-hint">{text.imageTypes}</span>
+                                        <input
+                                            type="file"
+                                            accept=".png,.jpg,.jpeg"
+                                            class="cr-hidden-input"
+                                            onchange={handleFileChange}
+                                        />
+                                    </label>
+                                </template>
+                                <template lwc:if={fileError}>
+                                    <span class="cr-field-error" role="alert">{fileError}</span>
+                                </template>
+                                <span class="cr-field-hint">{text.imageHint}</span>
+                            </div>
+                        </template>
+
+                        <div class="cr-field">
+                            <label class="cr-field-label" for="description">
+                                {descriptionLabel}<span class="cr-required"> *</span>
+                            </label>
+                            <textarea
+                                id="description"
+                                class="cr-input cr-textarea"
+                                required
+                                oninput={handleDescriptionChange}
+                                placeholder={text.descriptionPlaceholder}
+                            >{description}</textarea>
+                            <span class="cr-field-hint">{text.descriptionHint}</span>
+                        </div>
+
+                        <div class="cr-field-grid">
+                            <div class="cr-field">
+                                <span class="cr-field-label">{text.preferredMetal}</span>
+                                <div class="cr-chip-group">
+                                    <template for:each={metalOptions} for:item="opt">
+                                        <button
+                                            type="button"
+                                            key={opt.value}
+                                            class={opt.cssClass}
+                                            data-value={opt.value}
+                                            aria-pressed={opt.selected}
+                                            onclick={handleMetalSelect}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="cr-field">
+                                <span class="cr-field-label">{text.stoneType}</span>
+                                <div class="cr-chip-group">
+                                    <template for:each={stoneOptions} for:item="opt">
+                                        <button
+                                            type="button"
+                                            key={opt.value}
+                                            class={opt.cssClass}
+                                            data-value={opt.value}
+                                            aria-pressed={opt.selected}
+                                            onclick={handleStoneSelect}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                            <div class="cr-field">
+                                <span class="cr-field-label">{text.timeline}</span>
+                                <div class="cr-chip-group">
+                                    <template for:each={timelineOptions} for:item="opt">
+                                        <button
+                                            type="button"
+                                            key={opt.value}
+                                            class={opt.cssClass}
+                                            data-value={opt.value}
+                                            aria-pressed={opt.selected}
+                                            onclick={handleTimelineSelect}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cr-field">
+                            <span class="cr-field-label">{text.budgetGuide}</span>
+                            <div class="cr-chip-group">
+                                <template for:each={budgetOptions} for:item="opt">
+                                    <button
+                                        type="button"
+                                        key={opt.value}
+                                        class={opt.cssClass}
+                                        data-value={opt.value}
+                                        aria-pressed={opt.selected}
+                                        onclick={handleBudgetSelect}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                </template>
+                            </div>
+                        </div>
+                    </section>
+                </template>
+
+                <template lwc:if={isStep2}>
+                    <section class="cr-section">
+                        <div class="cr-field-grid">
+                            <div class="cr-field">
+                                <label class="cr-field-label" for="full-name">
+                                    {text.fullName}<span class="cr-required"> *</span>
+                                </label>
+                                <input
+                                    id="full-name"
+                                    class="cr-input"
+                                    type="text"
+                                    required
+                                    autocomplete="name"
+                                    value={fullName}
+                                    oninput={handleNameChange}
+                                    placeholder={text.namePlaceholder}
+                                />
+                            </div>
+                            <div class="cr-field">
+                                <label class="cr-field-label" for="email">
+                                    {text.email}<span class="cr-required"> *</span>
+                                </label>
+                                <input
+                                    id="email"
+                                    class="cr-input"
+                                    type="email"
+                                    required
+                                    autocomplete="email"
+                                    value={email}
+                                    oninput={handleEmailChange}
+                                    placeholder={text.emailPlaceholder}
+                                />
+                            </div>
+                            <div class="cr-field">
+                                <label class="cr-field-label" for="phone">{text.phone}</label>
+                                <input
+                                    id="phone"
+                                    class="cr-input"
+                                    type="tel"
+                                    autocomplete="tel"
+                                    value={phone}
+                                    oninput={handlePhoneChange}
+                                    placeholder={text.phonePlaceholder}
+                                />
+                            </div>
+                            <div class="cr-field">
+                                <span class="cr-field-label">{text.preferredContact}</span>
+                                <div class="cr-chip-group">
+                                    <template for:each={contactOptions} for:item="opt">
+                                        <button
+                                            type="button"
+                                            key={opt.value}
+                                            class={opt.cssClass}
+                                            data-value={opt.value}
+                                            aria-pressed={opt.selected}
+                                            onclick={handleContactSelect}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </template>
+
+                <template lwc:if={isStep3}>
+                    <section class="cr-section cr-section_review">
+                        <p class="cr-question">{text.reviewQuestion}</p>
+                        <dl class="cr-summary-list">
+                            <template for:each={reviewItems} for:item="item">
+                                <div class="cr-summary-row" key={item.key}>
+                                    <dt>{item.label}</dt>
+                                    <dd>{item.value}</dd>
+                                </div>
+                            </template>
+                        </dl>
+                    </section>
+                </template>
+            </div>
+
+            <div class="cr-nav">
+                <template lwc:if={showBack}>
+                    <button type="button" class="cr-back-button" onclick={handleBack} disabled={isSubmitting}>
+                        {text.back}
+                    </button>
+                </template>
+                <template lwc:else>
+                    <span class="cr-nav-spacer"></span>
+                </template>
+                <button type="button" class="cr-next-button" onclick={handleNext} disabled={nextDisabled}>
+                    <template lwc:if={isSubmitting}>{text.submitting}</template>
+                    <template lwc:else>{nextLabel}</template>
+                </button>
+            </div>
+        </template>
+    </div>
+</template>

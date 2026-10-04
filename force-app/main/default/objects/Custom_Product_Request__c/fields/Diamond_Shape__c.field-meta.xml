@@ -3,7 +3,6 @@
     <fullName>Diamond_Shape__c</fullName>
     <label>Diamond Shape</label>
     <required>false</required>
-    <trackFeedHistory>false</trackFeedHistory>
     <trackHistory>true</trackHistory>
     <trackTrending>false</trackTrending>
     <type>Picklist</type>

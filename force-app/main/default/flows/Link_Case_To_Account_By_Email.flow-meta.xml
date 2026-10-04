@@ -27,17 +27,17 @@
             <label>Account Found</label>
         </rules>
     </decisions>
-    <description>When a Case is created with a Supplied Email, links it to the Account whose Email__c matches. If no matching Account exists, creates a new Person Account from the Case's supplied details (FirstName/LastName split from SuppliedName, Email__c and PersonEmail = SuppliedEmail) and links the Case to it.</description>
+    <description>When a Case is created with a Supplied Email, links it to the Account whose Email__c matches. If no matching Account exists, creates a new Person Account from the Case&apos;s supplied details (FirstName/LastName split from SuppliedName, Email__c and PersonEmail = SuppliedEmail) and links the Case to it.</description>
     <environments>Default</environments>
     <formulas>
         <name>New_Account_First_Name</name>
         <dataType>String</dataType>
-        <expression>IF(CONTAINS({!$Record.SuppliedName}, " "), LEFT({!$Record.SuppliedName}, FIND(" ", {!$Record.SuppliedName}) - 1), "")</expression>
+        <expression>IF(CONTAINS({!$Record.SuppliedName}, &quot; &quot;), LEFT({!$Record.SuppliedName}, FIND(&quot; &quot;, {!$Record.SuppliedName}) - 1), &quot;&quot;)</expression>
     </formulas>
     <formulas>
         <name>New_Account_Last_Name</name>
         <dataType>String</dataType>
-        <expression>IF(CONTAINS({!$Record.SuppliedName}, " "), MID({!$Record.SuppliedName}, FIND(" ", {!$Record.SuppliedName}) + 1, 100), {!$Record.SuppliedName})</expression>
+        <expression>IF(CONTAINS({!$Record.SuppliedName}, &quot; &quot;), MID({!$Record.SuppliedName}, FIND(&quot; &quot;, {!$Record.SuppliedName}) + 1, 100), {!$Record.SuppliedName})</expression>
     </formulas>
     <interviewLabel>Link Case To Account By Email {!$Flow.CurrentDateTime}</interviewLabel>
     <label>Link Case To Account By Email</label>
@@ -69,9 +69,9 @@
             <targetReference>Update_Case_With_New_Account</targetReference>
         </connector>
         <inputAssignments>
-            <field>RecordTypeId</field>
+            <field>Email__c</field>
             <value>
-                <elementReference>Get_Person_Account_Record_Type.Id</elementReference>
+                <elementReference>$Record.SuppliedEmail</elementReference>
             </value>
         </inputAssignments>
         <inputAssignments>
@@ -87,20 +87,41 @@
             </value>
         </inputAssignments>
         <inputAssignments>
-            <field>Email__c</field>
-            <value>
-                <elementReference>$Record.SuppliedEmail</elementReference>
-            </value>
-        </inputAssignments>
-        <inputAssignments>
             <field>PersonEmail</field>
             <value>
                 <elementReference>$Record.SuppliedEmail</elementReference>
             </value>
         </inputAssignments>
+        <inputAssignments>
+            <field>RecordTypeId</field>
+            <value>
+                <elementReference>Get_Person_Account_Record_Type.Id</elementReference>
+            </value>
+        </inputAssignments>
         <object>Account</object>
         <storeOutputAutomatically>true</storeOutputAutomatically>
     </recordCreates>
+    <recordLookups>
+        <name>Get_Account_By_Email</name>
+        <label>Get Account By Email</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
+        <connector>
+            <targetReference>Check_Account_Found</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>Email__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <elementReference>$Record.SuppliedEmail</elementReference>
+            </value>
+        </filters>
+        <getFirstRecordOnly>true</getFirstRecordOnly>
+        <object>Account</object>
+        <storeOutputAutomatically>true</storeOutputAutomatically>
+    </recordLookups>
     <recordLookups>
         <name>Get_Person_Account_Record_Type</name>
         <label>Get Person Account Record Type</label>
@@ -127,27 +148,6 @@
         </filters>
         <getFirstRecordOnly>true</getFirstRecordOnly>
         <object>RecordType</object>
-        <storeOutputAutomatically>true</storeOutputAutomatically>
-    </recordLookups>
-    <recordLookups>
-        <name>Get_Account_By_Email</name>
-        <label>Get Account By Email</label>
-        <locationX>0</locationX>
-        <locationY>0</locationY>
-        <assignNullValuesIfNoRecordsFound>false</assignNullValuesIfNoRecordsFound>
-        <connector>
-            <targetReference>Check_Account_Found</targetReference>
-        </connector>
-        <filterLogic>and</filterLogic>
-        <filters>
-            <field>Email__c</field>
-            <operator>EqualTo</operator>
-            <value>
-                <elementReference>$Record.SuppliedEmail</elementReference>
-            </value>
-        </filters>
-        <getFirstRecordOnly>true</getFirstRecordOnly>
-        <object>Account</object>
         <storeOutputAutomatically>true</storeOutputAutomatically>
     </recordLookups>
     <recordUpdates>
@@ -217,5 +217,5 @@
         <recordTriggerType>Create</recordTriggerType>
         <triggerType>RecordAfterSave</triggerType>
     </start>
-    <status>Draft</status>
+    <status>Active</status>
 </Flow>

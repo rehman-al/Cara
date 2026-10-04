@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Deposit_Link__c</fullName>
+    <description>Link 1 (deposit payment) returned by POST /action/sfsc-deposit-basket, e.g. /pay/deposit?basketId=... Sent to the customer by CARASplitPaymentNotificationService.</description>
+    <label>Deposit Link</label>
+    <required>false</required>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Url</type>
+</CustomField>

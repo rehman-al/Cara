@@ -1,10 +1,11 @@
 @RestResource(urlMapping='/cara/cases')
 global with sharing class CARACaseRestService {
+    private static final String GENERAL_ENQUIRY_RECORD_TYPE = 'General_Enquiry';
+
     @HttpGet
     global static void getCasesByAccount() {
         try {
-            Id accountId = requireAccountId(RestContext.request.params.get('accountId'));
-            requireAccountExists(accountId);
+            Id accountId = resolveAccountIdFromEmail(RestContext.request.params.get('email'));
 
             List<Case> caseRecords = [
                 SELECT
@@ -22,6 +23,7 @@ global with sharing class CARACaseRestService {
                     ClosedDate
                 FROM Case
                 WHERE AccountId = :accountId
+                AND RecordType.DeveloperName = :GENERAL_ENQUIRY_RECORD_TYPE
                 ORDER BY CreatedDate DESC
             ];
 
@@ -46,29 +48,33 @@ global with sharing class CARACaseRestService {
         }
     }
 
-    private static Id requireAccountId(String accountIdValue) {
-        if (String.isBlank(accountIdValue)) {
-            throw new CARAChatApiSupport.RequestException('accountId is required.');
+    private static Id resolveAccountIdFromEmail(String emailValue) {
+        if (String.isBlank(emailValue)) {
+            throw new CARAChatApiSupport.RequestException('email is required.');
         }
 
-        Id accountId;
-        try {
-            accountId = Id.valueOf(accountIdValue.trim());
-        } catch (Exception error) {
-            throw new CARAChatApiSupport.RequestException('accountId must be a valid Salesforce Account Id.');
+        String emailAddress = emailValue.trim().toLowerCase();
+        List<Contact> matchingContacts = [
+            SELECT Id, AccountId
+            FROM Contact
+            WHERE Email = :emailAddress
+            ORDER BY CreatedDate ASC
+            LIMIT 2
+        ];
+
+        if (matchingContacts.isEmpty()) {
+            throw new CARAChatApiSupport.NotFoundException('No customer was found for the given email.');
+        }
+        if (matchingContacts.size() > 1) {
+            throw new CARAChatApiSupport.RequestException('Multiple contacts use customer email ' + emailAddress + '.');
         }
 
-        if (accountId.getSObjectType() != Account.SObjectType) {
-            throw new CARAChatApiSupport.RequestException('accountId must identify an Account record.');
+        Id accountId = matchingContacts[0].AccountId;
+        if (accountId == null) {
+            throw new CARAChatApiSupport.NotFoundException('The customer is not associated with an Account.');
         }
 
         return accountId;
-    }
-
-    private static void requireAccountExists(Id accountId) {
-        if ([SELECT COUNT() FROM Account WHERE Id = :accountId] == 0) {
-            throw new CARAChatApiSupport.NotFoundException('The Account was not found or is not accessible.');
-        }
     }
 
     private class CaseSummary {

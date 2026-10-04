@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Budget_Guide__c</fullName>
+    <description>Budget band captured from the Customise wizard&apos;s &quot;Your vision&quot; step. Optional on the website.</description>
+    <label>Budget Guide</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Under AED 10,000</fullName>
+                <default>false</default>
+                <label>Under AED 10,000</label>
+            </value>
+            <value>
+                <fullName>AED 10,000 - 25,000</fullName>
+                <default>false</default>
+                <label>AED 10,000 - 25,000</label>
+            </value>
+            <value>
+                <fullName>AED 25,000 - 50,000</fullName>
+                <default>false</default>
+                <label>AED 25,000 - 50,000</label>
+            </value>
+            <value>
+                <fullName>AED 50,000 - 100,000</fullName>
+                <default>false</default>
+                <label>AED 50,000 - 100,000</label>
+            </value>
+            <value>
+                <fullName>Above AED 100,000</fullName>
+                <default>false</default>
+                <label>Above AED 100,000</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

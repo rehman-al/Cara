@@ -8,7 +8,6 @@
     &quot;General_Enquiry&quot;, &quot;GE_&quot;,
     &quot;Compliance&quot;, &quot;COMP_&quot;,
     &quot;Sales_Follow_up&quot;, &quot;SALES_&quot;,
-    &quot;KYC_Required&quot;, &quot;KYC_&quot;,
     &quot;&quot;
 ) &amp; CaseNumber</formula>
     <formulaTreatBlanksAs>BlankAsZero</formulaTreatBlanksAs>

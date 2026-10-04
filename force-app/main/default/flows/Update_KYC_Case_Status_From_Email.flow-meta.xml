@@ -148,7 +148,7 @@
         <inputAssignments>
             <field>Status</field>
             <value>
-                <stringValue>Opened</stringValue>
+                <stringValue>ID Validated</stringValue>
             </value>
         </inputAssignments>
         <object>Case</object>

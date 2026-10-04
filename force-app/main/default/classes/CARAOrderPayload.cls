@@ -9,6 +9,10 @@ public class CARAOrderPayload {
     public String currencyCode;
     public CustomerInfo customerInfo;
     public String customerName;
+    public Boolean c_isKycNeed;
+    public String c_ngeniusOrderReference;
+    public String c_ngeniusPaymentReference;
+    public String c_ngeniusPaymentState;
     public String exportStatus;
     public Boolean guest;
     public String lastModified;

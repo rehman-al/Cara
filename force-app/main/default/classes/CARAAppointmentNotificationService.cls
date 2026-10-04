@@ -145,11 +145,20 @@ public with sharing class CARAAppointmentNotificationService {
     }
 
 
+    /*
+     * The .ics attachment carries the appointment time as an absolute
+     * UTC instant, so a recipient's calendar app renders it in whatever
+     * timezone that app/device is set to (e.g. Pakistan), while this
+     * email body always renders it in the store's timezone (Dubai).
+     * Both are "correct" but can look like a mismatch to the recipient,
+     * so the Dubai timezone is called out explicitly here.
+     */
     private static String formatDisplayDateTime(Datetime dateTimeValue) {
 
         return dateTimeValue.format('EEEE, d MMMM yyyy', DISPLAY_TIME_ZONE) +
             ' at ' +
-            dateTimeValue.format('h:mm a', DISPLAY_TIME_ZONE);
+            dateTimeValue.format('h:mm a', DISPLAY_TIME_ZONE) +
+            ', Dubai time';
     }
 
 

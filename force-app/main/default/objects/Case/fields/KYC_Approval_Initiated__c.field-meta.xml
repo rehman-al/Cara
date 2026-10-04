@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>KYC_Approval_Initiated__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>Set to true the first time this Case is submitted for KYC Finance Approval (Case_Finance_Approval). Used as the approval process&apos;s entry-criteria guard and by the KYC_Submit_For_Approval flow to block a second submission on the same Case.</description>
+    <label>KYC Approval Process Initiated</label>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

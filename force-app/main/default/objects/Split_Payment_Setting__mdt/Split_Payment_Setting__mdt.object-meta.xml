@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Admin-configurable settings for the N-Genius split-payment (deposit/balance) integration — read via CARASplitPaymentSettings. Ships with one record, &quot;Default&quot;.</description>
+    <label>Split Payment Setting</label>
+    <pluralLabel>Split Payment Settings</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>

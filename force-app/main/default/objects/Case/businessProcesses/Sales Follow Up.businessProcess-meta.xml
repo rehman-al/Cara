@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <BusinessProcess xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>Sales Follow Up</fullName>
-    <description>Tracks a customer's order from initial discussion through CAD design, deposit, production, and shipping.</description>
+    <description>Tracks a customer&apos;s order from initial discussion through CAD design, deposit, production, and shipping.</description>
     <isActive>true</isActive>
     <values>
         <fullName>CAD design confirmed</fullName>

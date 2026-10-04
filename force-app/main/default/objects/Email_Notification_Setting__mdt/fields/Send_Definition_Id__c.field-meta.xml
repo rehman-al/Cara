@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Send_Definition_Id__c</fullName>
+    <description>Marketing Cloud sendDefinitionId used on the actions360/messaging/email/v1 callout for this email type. Never invented — left blank when not yet confirmed.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Send Definition Id</label>
+    <length>60</length>
+    <required>false</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

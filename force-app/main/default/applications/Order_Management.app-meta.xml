@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionOverrides>
+        <actionName>View</actionName>
+        <comment>Action override created by Lightning App Builder during activation.</comment>
+        <content>Case_Lightning_Page</content>
+        <formFactor>Large</formFactor>
+        <skipRecordTypeSelect>false</skipRecordTypeSelect>
+        <type>Flexipage</type>
+        <pageOrSobjectType>Case</pageOrSobjectType>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>View</actionName>
+        <comment>Action override created by Lightning App Builder during activation.</comment>
+        <content>Case_Lightning_Page</content>
+        <formFactor>Small</formFactor>
+        <skipRecordTypeSelect>false</skipRecordTypeSelect>
+        <type>Flexipage</type>
+        <pageOrSobjectType>Case</pageOrSobjectType>
+    </actionOverrides>
+    <brand>
+        <headerColor>#000000</headerColor>
+        <shouldOverrideOrgTheme>false</shouldOverrideOrgTheme>
+    </brand>
+    <formFactors>Small</formFactors>
+    <formFactors>Large</formFactors>
+    <isNavAutoTempTabsDisabled>false</isNavAutoTempTabsDisabled>
+    <isNavPersonalizationDisabled>false</isNavPersonalizationDisabled>
+    <isNavTabPersistenceDisabled>false</isNavTabPersistenceDisabled>
+    <isOmniPinnedViewEnabled>false</isOmniPinnedViewEnabled>
+    <label>Order Management</label>
+    <navType>Console</navType>
+    <tabs>standard-Order</tabs>
+    <tabs>standard-FulfillmentOrder</tabs>
+    <tabs>standard-Product2</tabs>
+    <tabs>standard-ReturnOrder</tabs>
+    <tabs>Store_Appointment_Booking__c</tabs>
+    <tabs>Store__c</tabs>
+    <tabs>Store_Time_Slot__c</tabs>
+    <uiType>Lightning</uiType>
+    <utilityBar>Order_Management_UtilityBar</utilityBar>
+    <workspaceConfig>
+        <mappings>
+            <tab>Store_Appointment_Booking__c</tab>
+        </mappings>
+        <mappings>
+            <tab>Store_Time_Slot__c</tab>
+        </mappings>
+        <mappings>
+            <tab>Store__c</tab>
+        </mappings>
+        <mappings>
+            <tab>standard-FulfillmentOrder</tab>
+        </mappings>
+        <mappings>
+            <tab>standard-Order</tab>
+        </mappings>
+        <mappings>
+            <tab>standard-Product2</tab>
+        </mappings>
+        <mappings>
+            <tab>standard-ReturnOrder</tab>
+        </mappings>
+    </workspaceConfig>
+</CustomApplication>

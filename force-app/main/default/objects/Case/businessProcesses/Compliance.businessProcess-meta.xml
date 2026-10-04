@@ -15,6 +15,14 @@
         <default>false</default>
     </values>
     <values>
+        <fullName>Compliance Approved</fullName>
+        <default>false</default>
+    </values>
+    <values>
+        <fullName>Compliance Rejected</fullName>
+        <default>false</default>
+    </values>
+    <values>
         <fullName>ID Validated</fullName>
         <default>false</default>
     </values>
@@ -44,6 +52,10 @@
     </values>
     <values>
         <fullName>Rejected</fullName>
+        <default>false</default>
+    </values>
+    <values>
+        <fullName>Submitted for Approval</fullName>
         <default>false</default>
     </values>
     <values>

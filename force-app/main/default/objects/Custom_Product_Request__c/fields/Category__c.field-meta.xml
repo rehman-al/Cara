@@ -50,6 +50,30 @@
                 <default>false</default>
                 <label>Chain</label>
             </value>
+            <value>
+                <fullName>Custom</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Custom</label>
+            </value>
+            <value>
+                <fullName>Other</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Other</label>
+            </value>
+            <value>
+                <fullName>Product</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Product</label>
+            </value>
+            <value>
+                <fullName>Service</fullName>
+                <default>false</default>
+                <isActive>false</isActive>
+                <label>Service</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>

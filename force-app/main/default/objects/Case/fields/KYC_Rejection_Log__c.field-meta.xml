@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>KYC_Rejection_Log__c</fullName>
+    <description>Timestamped audit trail of the cancel/void/refund steps attempted for this Case&apos;s rejection — SFCC responses, payment state read, gateway result, and any errors.</description>
+    <label>KYC Rejection Log</label>
+    <length>32768</length>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>6</visibleLines>
+</CustomField>

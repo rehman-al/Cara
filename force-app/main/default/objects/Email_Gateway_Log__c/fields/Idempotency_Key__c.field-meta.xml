@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Idempotency_Key__c</fullName>
+    <caseSensitive>true</caseSensitive>
+    <description>emailType + &apos;:&apos; + (requestId or relatedRecordId or recipient email). Unique external id — CARAEmailGatewayService upserts on this so a retried/duplicate business event never sends the same email twice.</description>
+    <externalId>true</externalId>
+    <label>Idempotency Key</label>
+    <length>255</length>
+    <required>true</required>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>true</unique>
+</CustomField>

@@ -27,6 +27,23 @@
         <name>Finance_Review</name>
     </approvalStep>
     <enableMobileDeviceAccess>true</enableMobileDeviceAccess>
+    <entryCriteria>
+        <criteriaItems>
+            <field>Case.Status</field>
+            <operation>equals</operation>
+            <value>ID Validated</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Case.RecordType</field>
+            <operation>equals</operation>
+            <value>Compliance</value>
+        </criteriaItems>
+        <criteriaItems>
+            <field>Case.KYC_Approval_Initiated__c</field>
+            <operation>equals</operation>
+            <value>False</value>
+        </criteriaItems>
+    </entryCriteria>
     <finalApprovalActions>
         <action>
             <name>Update_Status_Approve</name>
@@ -42,6 +59,10 @@
     </finalRejectionActions>
     <finalRejectionRecordLock>false</finalRejectionRecordLock>
     <initialSubmissionActions>
+        <action>
+            <name>Update_KYC_Approval_Initiated</name>
+            <type>FieldUpdate</type>
+        </action>
         <action>
             <name>Update_Status_Submitted</name>
             <type>FieldUpdate</type>

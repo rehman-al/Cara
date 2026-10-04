@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Basket_Id__c</fullName>
+    <caseSensitive>false</caseSensitive>
+    <description>SFCC/MRT basket Id returned by POST /action/sfsc-deposit-basket for this request&apos;s deposit (Link 1). Used to cancel the basket via /action/sfsc-delete-basket before the customer pays. (v2)</description>
+    <externalId>true</externalId>
+    <label>Basket Id</label>
+    <length>100</length>
+    <required>false</required>
+    <trackHistory>true</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Text</type>
+    <unique>true</unique>
+</CustomField>

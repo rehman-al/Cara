@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Source__c</fullName>
+    <description>Who initiated the send — SFCC (via CARAEmailGatewayRestService) or ServiceCloud (internal Apex/Flow trigger).</description>
+    <label>Source</label>
+    <required>true</required>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>SFCC</fullName>
+                <default>false</default>
+                <label>SFCC</label>
+            </value>
+            <value>
+                <fullName>ServiceCloud</fullName>
+                <default>false</default>
+                <label>ServiceCloud</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

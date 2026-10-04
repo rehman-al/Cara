@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Store_Time_Slot__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Optional. When set, this closure blocks only this specific slot on Closure_Date__c (blackout/restriction). When blank, the entire store is blocked for that date (holiday/closure).</description>
+    <label>Store Time Slot</label>
+    <referenceTo>Store_Time_Slot__c</referenceTo>
+    <relationshipLabel>Store Closures</relationshipLabel>
+    <relationshipName>Store_Closures</relationshipName>
+    <required>false</required>
+    <trackTrending>false</trackTrending>
+    <type>Lookup</type>
+</CustomField>

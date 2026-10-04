@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<BusinessProcess xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>General Enquiry SP</fullName>
+    <isActive>true</isActive>
+    <values>
+        <fullName>Answer</fullName>
+        <default>false</default>
+    </values>
+    <values>
+        <fullName>Completed</fullName>
+        <default>false</default>
+    </values>
+    <values>
+        <fullName>In-Progress</fullName>
+        <default>false</default>
+    </values>
+    <values>
+        <fullName>Opened</fullName>
+        <default>false</default>
+    </values>
+    <values>
+        <fullName>Unread</fullName>
+        <default>true</default>
+    </values>
+</BusinessProcess>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Retryable_Status_Codes__c</fullName>
+    <description>Comma-separated HTTP status codes that should be retried, e.g. &quot;502&quot; or &quot;502,503,504&quot;. Never list 400 or 401 here — those are payload/auth errors and must always surface immediately.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Retryable Status Codes</label>
+    <length>255</length>
+    <required>true</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

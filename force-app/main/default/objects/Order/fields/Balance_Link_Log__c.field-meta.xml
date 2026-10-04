@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Balance_Link_Log__c</fullName>
+    <description>Timestamped audit trail of balance-link callouts to SFCC/MRT for this Order — status codes, categorised errors (400 payload / 401 auth / 502 gateway), and retry outcomes.</description>
+    <label>Balance Link Log</label>
+    <length>32768</length>
+    <trackHistory>false</trackHistory>
+    <type>LongTextArea</type>
+    <visibleLines>6</visibleLines>
+</CustomField>

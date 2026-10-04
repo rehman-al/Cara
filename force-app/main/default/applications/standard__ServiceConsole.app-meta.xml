@@ -179,6 +179,7 @@
     <tabs>standard-Account</tabs>
     <tabs>standard-Contact</tabs>
     <tabs>standard-Case</tabs>
+    <tabs>Customisation_Option__c</tabs>
     <tabs>standard-Opportunity</tabs>
     <tabs>standard-Lead</tabs>
     <tabs>standard-Knowledge</tabs>
@@ -187,6 +188,9 @@
     <tabs>Store__c</tabs>
     <tabs>Store_Time_Slot__c</tabs>
     <workspaceConfig>
+        <mappings>
+            <tab>Customisation_Option__c</tab>
+        </mappings>
         <mappings>
             <tab>MobileLanding</tab>
         </mappings>

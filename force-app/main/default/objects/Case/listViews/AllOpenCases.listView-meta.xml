@@ -10,6 +10,7 @@
     <columns>CASES.ORIGIN</columns>
     <columns>CORE.USERS.ALIAS</columns>
     <columns>CASES.RECORDTYPE</columns>
+    <columns>CASES.CREATED_DATE</columns>
     <filterScope>Everything</filterScope>
     <filters>
         <field>CASES.CREATED_DATE</field>

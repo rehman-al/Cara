@@ -80,15 +80,15 @@
         <closed>false</closed>
     </standardValue>
     <standardValue>
-        <fullName>Awaiting Documents</fullName>
-        <default>false</default>
-        <label>Awaiting Documents</label>
-        <closed>false</closed>
-    </standardValue>
-    <standardValue>
         <fullName>Opened</fullName>
         <default>false</default>
         <label>Opened</label>
+        <closed>false</closed>
+    </standardValue>
+    <standardValue>
+        <fullName>Awaiting Documents</fullName>
+        <default>false</default>
+        <label>Awaiting Documents</label>
         <closed>false</closed>
     </standardValue>
     <standardValue>

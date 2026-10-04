@@ -7,6 +7,8 @@
  *   - Average_Order_Value__c     = spend / count
  *   - First_Order_Date__c        = MIN(Order.EffectiveDate)
  *   - Last_Order_Date__c         = MAX(Order.EffectiveDate)
+ *   - Customer_Tier__c           = loyalty tier for Customer_Lifetime_Spend__c
+ *   - Loyalty_Tier_Benefits__c   = benefits text for that tier
  *
  * Only Orders whose Status is in QUALIFYING_STATUSES are counted. Change that
  * set to redefine what "spend" means for the business (for example, add
@@ -27,6 +29,67 @@ public with sharing class OrderCustomerMetricsService {
     private static final Set<String> MATERIAL_FIELDS = new Set<String>{
         'AccountId', 'TotalAmount', 'Status', 'EffectiveDate'
     };
+
+    /** Tier assigned when lifetime spend is below every threshold below. */
+    private static final String DEFAULT_TIER = 'Bronze';
+
+    /**
+     * Loyalty tiers in descending order of minimum lifetime spend (AED), each
+     * with the member benefits it unlocks. The first entry whose minSpend the
+     * account's lifetime spend meets or exceeds wins.
+     */
+    private static final List<TierDefinition> TIER_DEFINITIONS = new List<TierDefinition>{
+        new TierDefinition('Platinum', 100000, new List<String>{
+            'Complimentary delivery',
+            'First access to new collections',
+            'Exclusive Platinum member offers',
+            'Priority client service',
+            'Private shopping experiences'
+        }),
+        new TierDefinition('Gold', 50000, new List<String>{
+            'Complimentary delivery',
+            'Priority access to new collections',
+            'Exclusive member offers',
+            'Priority client service'
+        }),
+        new TierDefinition('Silver', 10000, new List<String>{
+            'Complimentary delivery',
+            'Early access to selected launches',
+            'Exclusive member offers'
+        })
+    };
+
+    private class TierDefinition {
+        String label;
+        Decimal minSpend;
+        String benefits;
+
+        TierDefinition(String label, Decimal minSpend, List<String> benefits) {
+            this.label = label;
+            this.minSpend = minSpend;
+            this.benefits = String.join(benefits, '; ');
+        }
+    }
+
+    /** Returns the loyalty tier label for a given lifetime spend. */
+    private static String tierFor(Decimal lifetimeSpend) {
+        for (TierDefinition tier : TIER_DEFINITIONS) {
+            if (lifetimeSpend >= tier.minSpend) {
+                return tier.label;
+            }
+        }
+        return DEFAULT_TIER;
+    }
+
+    /** Returns the benefits text for a tier label, or null below Silver. */
+    private static String benefitsFor(String tierLabel) {
+        for (TierDefinition tier : TIER_DEFINITIONS) {
+            if (tier.label == tierLabel) {
+                return tier.benefits;
+            }
+        }
+        return null;
+    }
 
     /**
      * Trigger entry point. Pass Trigger.new / Trigger.old; either may be null
@@ -103,7 +166,9 @@ public with sharing class OrderCustomerMetricsService {
                 Number_of_Orders__c = 0,
                 Average_Order_Value__c = 0,
                 First_Order_Date__c = null,
-                Last_Order_Date__c = null
+                Last_Order_Date__c = null,
+                Customer_Tier__c = DEFAULT_TIER,
+                Loyalty_Tier_Benefits__c = benefitsFor(DEFAULT_TIER)
             ));
         }
 
@@ -133,6 +198,10 @@ public with sharing class OrderCustomerMetricsService {
                 : (totalSpend / orderCount).setScale(2, System.RoundingMode.HALF_UP);
             acct.First_Order_Date__c = (Date) ar.get('firstOrderDate');
             acct.Last_Order_Date__c = (Date) ar.get('lastOrderDate');
+
+            String tier = tierFor(totalSpend);
+            acct.Customer_Tier__c = tier;
+            acct.Loyalty_Tier_Benefits__c = benefitsFor(tier);
         }
 
         update toUpdate.values();

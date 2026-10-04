@@ -281,5 +281,6 @@ private class CARAAppointmentNotificationServiceTest {
         System.assert(emailBody.contains('Cara — Ras Al Khaimah'), 'Should include the store name.');
         System.assert(emailBody.contains('High jewellery'), 'Should include the interest category.');
         System.assert(emailBody.contains('in-store visit'), 'Should make clear this is an in-store visit.');
+        System.assert(emailBody.contains('Dubai time'), 'Should clarify the appointment time is in Dubai time.');
     }
 }

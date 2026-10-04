@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Preferred_Metal__c</fullName>
+    <description>Preferred metal captured from the Customise wizard&apos;s &quot;Your vision&quot; step. Optional on the website.</description>
+    <label>Preferred Metal</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Picklist</type>
+    <valueSet>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Yellow Gold</fullName>
+                <default>false</default>
+                <label>Yellow Gold</label>
+            </value>
+            <value>
+                <fullName>White Gold</fullName>
+                <default>false</default>
+                <label>White Gold</label>
+            </value>
+            <value>
+                <fullName>Rose Gold</fullName>
+                <default>false</default>
+                <label>Rose Gold</label>
+            </value>
+            <value>
+                <fullName>Platinum</fullName>
+                <default>false</default>
+                <label>Platinum</label>
+            </value>
+            <value>
+                <fullName>Not sure yet</fullName>
+                <default>false</default>
+                <label>Not sure yet</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

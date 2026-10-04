@@ -16,7 +16,12 @@ const REQUEST_ACTIONS = [
 ];
 
 const REQUEST_COLUMNS = [
-    { label: 'Request', fieldName: 'Name', type: 'text' },
+    {
+        label: 'Request',
+        fieldName: 'recordUrl',
+        type: 'url',
+        typeAttributes: { label: { fieldName: 'Name' }, target: '_self' }
+    },
     { label: 'Product Name', fieldName: 'Product_Name__c', type: 'text' },
     { label: 'Existing Product', fieldName: 'productName', type: 'text' },
     { label: 'Category', fieldName: 'Category__c', type: 'text' },
@@ -214,7 +219,8 @@ export default class CaseCustomProductManager extends NavigationMixin(
         if (result.data) {
             this.requests = result.data.map((request) => ({
                 ...request,
-                productName: request.Product__r?.Name || ''
+                productName: request.Product__r?.Name || '',
+                recordUrl: '/' + request.Id
             }));
         } else if (result.error) {
             this.requests = [];

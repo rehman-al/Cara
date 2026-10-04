@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Balance_Link__c</fullName>
+    <description>Link 2 (balance payment) returned by POST /action/sfsc-balance-link, e.g. /pay/balance?orderNo=... Sent to the customer by CARASplitPaymentNotificationService once the piece is ready for delivery.</description>
+    <label>Balance Link</label>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <type>Url</type>
+</CustomField>

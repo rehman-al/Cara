@@ -31,4 +31,24 @@
         <default>false</default>
         <label>KYC Automation</label>
     </standardValue>
+    <standardValue>
+        <fullName>Web enquiry</fullName>
+        <default>false</default>
+        <label>Web enquiry</label>
+    </standardValue>
+    <standardValue>
+        <fullName>Instagram</fullName>
+        <default>false</default>
+        <label>Instagram</label>
+    </standardValue>
+    <standardValue>
+        <fullName>WhatsApp</fullName>
+        <default>false</default>
+        <label>WhatsApp</label>
+    </standardValue>
+    <standardValue>
+        <fullName>In-store</fullName>
+        <default>false</default>
+        <label>In-store</label>
+    </standardValue>
 </StandardValueSet>

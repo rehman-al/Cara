@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Active__c</fullName>
+    <defaultValue>true</defaultValue>
+    <description>Unchecked for an email type that is not yet safe to send (e.g. missing Send_Definition_Id__c) — CARAEmailGatewayService refuses to call Marketing Cloud for an inactive/missing record.</description>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Active</label>
+    <type>Checkbox</type>
+</CustomField>

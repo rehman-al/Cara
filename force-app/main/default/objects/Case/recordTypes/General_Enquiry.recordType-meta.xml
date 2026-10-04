@@ -2,8 +2,19 @@
 <RecordType xmlns="http://soap.sforce.com/2006/04/metadata">
     <fullName>General_Enquiry</fullName>
     <active>true</active>
-    <businessProcess>Standard Support Process</businessProcess>
+    <businessProcess>General Enquiry SP</businessProcess>
     <label>General Enquiry</label>
+    <picklistValues>
+        <picklist>Case_Team__c</picklist>
+        <values>
+            <fullName>In-store</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Online</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
     <picklistValues>
         <picklist>Chat_Status__c</picklist>
         <values>
@@ -20,6 +31,44 @@
         </values>
     </picklistValues>
     <picklistValues>
+        <picklist>Contact_Method_Preference__c</picklist>
+        <values>
+            <fullName>Email</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Phone</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>WhatsApp</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
+        <picklist>KYC_Rejection_Status__c</picklist>
+        <values>
+            <fullName>Awaiting Gateway</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Completed</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Failed</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Order Cancelled</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Processing</fullName>
+            <default>false</default>
+        </values>
+    </picklistValues>
+    <picklistValues>
         <picklist>Origin</picklist>
         <values>
             <fullName>Email</fullName>
@@ -30,24 +79,28 @@
             <default>false</default>
         </values>
         <values>
+            <fullName>In-store</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Instagram</fullName>
+            <default>false</default>
+        </values>
+        <values>
             <fullName>Phone</fullName>
             <default>false</default>
         </values>
         <values>
-            <fullName>Twitter</fullName>
+            <fullName>Web enquiry</fullName>
             <default>false</default>
         </values>
         <values>
-            <fullName>Web</fullName>
+            <fullName>WhatsApp</fullName>
             <default>false</default>
         </values>
     </picklistValues>
     <picklistValues>
         <picklist>Priority</picklist>
-        <values>
-            <fullName>Critical</fullName>
-            <default>false</default>
-        </values>
         <values>
             <fullName>High</fullName>
             <default>false</default>
@@ -144,15 +197,39 @@
     <picklistValues>
         <picklist>Type</picklist>
         <values>
-            <fullName>Feature Request</fullName>
+            <fullName>B2B services</fullName>
             <default>false</default>
         </values>
         <values>
-            <fullName>Problem</fullName>
+            <fullName>Certification</fullName>
             <default>false</default>
         </values>
         <values>
-            <fullName>Question</fullName>
+            <fullName>Customer appointment</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Customer complaints</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Job offer</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Opening time</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Product info</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Store info</fullName>
+            <default>false</default>
+        </values>
+        <values>
+            <fullName>Suppliers</fullName>
             <default>false</default>
         </values>
     </picklistValues>

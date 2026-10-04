@@ -9,6 +9,7 @@
     <columns>CASES.PRIORITY</columns>
     <columns>CASES.CREATED_DATE</columns>
     <columns>CORE.USERS.ALIAS</columns>
+    <columns>CASES.LAST_UPDATE</columns>
     <filterScope>Everything</filterScope>
     <filters>
         <field>Custom_Case_Number__c</field>

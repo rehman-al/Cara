@@ -84,6 +84,207 @@ private class CARAOrderRestServiceTest {
         Assert.isTrue(synchronizedPayment.Comments.contains('00000429'));
     }
 
+    // =========================================================
+    // isKycNeed is derived from orderTotal vs. a per-currency threshold
+    // (AED >= 50,000, GBP >= 20,000). SFCC's c_isKycNeed and the N-Genius
+    // fields are no longer read by Order Sync. Currencies with no defined
+    // threshold (e.g. USD) never trigger KYC via this rule.
+    // =========================================================
+    @IsTest
+    static void kycFlagIsFalseWhenOrderTotalBelowThreshold() {
+        Map<String, Object> payload = buildFullPayload();
+        payload.put('orderTotal', 49999);
+        // SFCC still sending these must have no effect any more.
+        payload.put('c_isKycNeed', true);
+        payload.put('c_ngeniusOrderReference', 'ngen-order-00000429');
+        payload.put('c_ngeniusPaymentReference', 'ngen-pay-00000429');
+        payload.put('c_ngeniusPaymentState', 'AUTHORISED');
+
+        Test.startTest();
+        invokeService(JSON.serialize(payload));
+        Test.stopTest();
+
+        Assert.areEqual(200, RestContext.response.statusCode, RestContext.response.responseBody.toString());
+
+        Order synchronizedOrder = [
+            SELECT isKycNeed__c
+            FROM Order
+            WHERE OrderReferenceNumber = '00000429'
+            LIMIT 1
+        ];
+        Assert.isFalse(synchronizedOrder.isKycNeed__c, 'orderTotal 49,999 AED is below the 50,000 threshold.');
+    }
+
+    @IsTest
+    static void kycFlagIsTrueWhenOrderTotalAtThreshold() {
+        Map<String, Object> payload = buildFullPayload();
+        payload.put('orderTotal', 50000);
+
+        Test.startTest();
+        invokeService(JSON.serialize(payload));
+        Test.stopTest();
+
+        Assert.areEqual(200, RestContext.response.statusCode, RestContext.response.responseBody.toString());
+
+        Order synchronizedOrder = [SELECT isKycNeed__c FROM Order WHERE OrderReferenceNumber = '00000429' LIMIT 1];
+        Assert.isTrue(synchronizedOrder.isKycNeed__c, 'orderTotal 50,000 AED meets the threshold.');
+    }
+
+    @IsTest
+    static void kycFlagIsTrueWhenOrderTotalAboveThreshold() {
+        Map<String, Object> payload = buildFullPayload();
+        payload.put('orderTotal', 50001);
+
+        Test.startTest();
+        invokeService(JSON.serialize(payload));
+        Test.stopTest();
+
+        Assert.areEqual(200, RestContext.response.statusCode, RestContext.response.responseBody.toString());
+
+        Order synchronizedOrder = [SELECT isKycNeed__c FROM Order WHERE OrderReferenceNumber = '00000429' LIMIT 1];
+        Assert.isTrue(synchronizedOrder.isKycNeed__c, 'orderTotal 50,001 AED exceeds the threshold.');
+    }
+
+    @IsTest
+    static void kycFlagIsFalseForNonAedOrderEvenAboveThreshold() {
+        Map<String, Object> payload = buildFullPayload();
+        payload.put('currency', 'USD');
+        payload.put('orderTotal', 75000);
+
+        Test.startTest();
+        invokeService(JSON.serialize(payload));
+        Test.stopTest();
+
+        Assert.areEqual(200, RestContext.response.statusCode, RestContext.response.responseBody.toString());
+
+        Order synchronizedOrder = [SELECT isKycNeed__c FROM Order WHERE OrderReferenceNumber = '00000429' LIMIT 1];
+        Assert.isFalse(
+            synchronizedOrder.isKycNeed__c,
+            'The AED 50,000 threshold is not blindly applied to a non-AED orderTotal.'
+        );
+    }
+
+    @IsTest
+    static void kycFlagIsFalseWhenGbpOrderTotalBelowThreshold() {
+        Map<String, Object> payload = buildFullPayload();
+        payload.put('currency', 'GBP');
+        payload.put('orderTotal', 19999);
+
+        Test.startTest();
+        invokeService(JSON.serialize(payload));
+        Test.stopTest();
+
+        Assert.areEqual(200, RestContext.response.statusCode, RestContext.response.responseBody.toString());
+
+        Order synchronizedOrder = [SELECT isKycNeed__c FROM Order WHERE OrderReferenceNumber = '00000429' LIMIT 1];
+        Assert.isFalse(synchronizedOrder.isKycNeed__c, 'orderTotal 19,999 GBP is below the 20,000 threshold.');
+    }
+
+    @IsTest
+    static void kycFlagIsTrueWhenGbpOrderTotalAtThreshold() {
+        Map<String, Object> payload = buildFullPayload();
+        payload.put('currency', 'GBP');
+        payload.put('orderTotal', 20000);
+
+        Test.startTest();
+        invokeService(JSON.serialize(payload));
+        Test.stopTest();
+
+        Assert.areEqual(200, RestContext.response.statusCode, RestContext.response.responseBody.toString());
+
+        Order synchronizedOrder = [SELECT isKycNeed__c FROM Order WHERE OrderReferenceNumber = '00000429' LIMIT 1];
+        Assert.isTrue(synchronizedOrder.isKycNeed__c, 'orderTotal 20,000 GBP meets the threshold.');
+    }
+
+    @IsTest
+    static void kycFlagIsTrueWhenGbpOrderTotalAboveThreshold() {
+        Map<String, Object> payload = buildFullPayload();
+        payload.put('currency', 'GBP');
+        payload.put('orderTotal', 20001);
+
+        Test.startTest();
+        invokeService(JSON.serialize(payload));
+        Test.stopTest();
+
+        Assert.areEqual(200, RestContext.response.statusCode, RestContext.response.responseBody.toString());
+
+        Order synchronizedOrder = [SELECT isKycNeed__c FROM Order WHERE OrderReferenceNumber = '00000429' LIMIT 1];
+        Assert.isTrue(synchronizedOrder.isKycNeed__c, 'orderTotal 20,001 GBP exceeds the threshold.');
+    }
+
+    // =========================================================
+    // Reusing the existing KYC Case + Order Hold automation: a KYC-required
+    // Order is put On Hold and gets exactly one Compliance Case, even when
+    // synced repeatedly while still above threshold.
+    // =========================================================
+    @IsTest
+    static void kycAtThresholdHoldsOrderAndCreatesSingleCaseIdempotently() {
+        Map<String, Object> payload = buildFullPayload();
+        payload.put('currency', 'AED');
+        payload.put('orderTotal', 50000);
+
+        Test.startTest();
+        invokeService(JSON.serialize(payload));
+        invokeService(JSON.serialize(payload));
+        Test.stopTest();
+
+        Assert.areEqual(200, RestContext.response.statusCode, RestContext.response.responseBody.toString());
+
+        Order synchronizedOrder = [
+            SELECT Id, Status, isKycNeed__c
+            FROM Order
+            WHERE OrderReferenceNumber = '00000429'
+            LIMIT 1
+        ];
+        Assert.isTrue(synchronizedOrder.isKycNeed__c, 'orderTotal 50,000 AED meets the threshold.');
+        Assert.areEqual('On Hold', synchronizedOrder.Status, 'KYC - Hold High Value Orders should hold the order.');
+        Assert.areEqual(
+            1,
+            [SELECT COUNT() FROM Case WHERE KYC_Order__c = :synchronizedOrder.Id],
+            'Re-syncing an already KYC-flagged Order must not create a duplicate Compliance Case.'
+        );
+    }
+
+    @IsTest
+    static void nonKycOrderIsNotHeld() {
+        Map<String, Object> payload = buildFullPayload();
+        payload.put('currency', 'AED');
+        payload.put('orderTotal', 49999);
+
+        Test.startTest();
+        invokeService(JSON.serialize(payload));
+        Test.stopTest();
+
+        Order synchronizedOrder = [SELECT Status FROM Order WHERE OrderReferenceNumber = '00000429' LIMIT 1];
+        Assert.areEqual('Draft', synchronizedOrder.Status, 'An Order below threshold must not be held.');
+    }
+
+    // =========================================================
+    // SFCC status "new" is the status of a freshly placed order (before
+    // fulfillment/activation) and must map the same as "created" — an
+    // Order Sync failure previously surfaced as "Unsupported order status:
+    // new" because mapOrderStatus() only recognized created/draft/activated.
+    // =========================================================
+    @IsTest
+    static void sfccNewOrderStatusMapsToDraft() {
+        Map<String, Object> payload = buildFullPayload();
+        payload.put('orderNo', '00000674');
+        payload.put('status', 'new');
+
+        Test.startTest();
+        invokeService(JSON.serialize(payload));
+        Test.stopTest();
+
+        Assert.areEqual(200, RestContext.response.statusCode, RestContext.response.responseBody.toString());
+        Order synchronizedOrder = [
+            SELECT Status
+            FROM Order
+            WHERE OrderReferenceNumber = '00000674'
+            LIMIT 1
+        ];
+        Assert.areEqual('Draft', synchronizedOrder.Status);
+    }
+
     @IsTest
     static void missingRequiredFieldReturns400AndRollsBack() {
         Map<String, Object> invalidPayload = buildFullPayload();
@@ -102,6 +303,49 @@ private class CARAOrderRestServiceTest {
         Assert.areEqual(0, [SELECT COUNT() FROM Shipment]);
         Assert.areEqual(0, [SELECT COUNT() FROM Payment]);
         Assert.areEqual(0, [SELECT COUNT() FROM CardPaymentMethod]);
+    }
+
+    // =========================================================
+    // Non-card payment instruments (gift certificate, wallet, COD, etc.)
+    // legitimately omit paymentCard. Order 00000676 failed with "requires
+    // paymentCard" because that case previously hard-failed the whole
+    // order; it must now be skipped (with a warning) instead of rejecting
+    // the order.
+    // =========================================================
+    @IsTest
+    static void nonCardPaymentInstrumentIsSkippedWithWarningInsteadOfFailingOrder() {
+        Map<String, Object> payload = buildFullPayload();
+        payload.put('orderNo', '00000676');
+
+        Map<String, Object> giftCertificateInstrument = new Map<String, Object>{
+            'amount' => 50,
+            'paymentInstrumentId' => 'gift-cert-00000676',
+            'paymentMethodId' => 'GIFT_CERTIFICATE'
+        };
+        List<Object> instruments = (List<Object>) payload.get('paymentInstruments');
+        instruments.add(giftCertificateInstrument);
+
+        Test.startTest();
+        invokeService(JSON.serialize(payload));
+        Test.stopTest();
+
+        String responseBody = RestContext.response.responseBody.toString();
+        Assert.areEqual(200, RestContext.response.statusCode, responseBody);
+
+        Map<String, Object> parsedResponse = (Map<String, Object>) JSON.deserializeUntyped(responseBody);
+        List<Object> warnings = (List<Object>) parsedResponse.get('warnings');
+        Boolean hasSkipWarning = false;
+        for (Object warningValue : warnings) {
+            if (((String) warningValue).contains('gift-cert-00000676')) {
+                hasSkipWarning = true;
+            }
+        }
+        Assert.isTrue(hasSkipWarning, 'Expected a warning noting the non-card instrument was not synced: ' + responseBody);
+
+        Assert.areEqual(1, [SELECT COUNT() FROM Order WHERE OrderReferenceNumber = '00000676']);
+        Assert.areEqual(1, [SELECT COUNT() FROM Payment WHERE Payment_Gateway_Token__c = '31640bb6c96ece3042d0035177']);
+        Assert.areEqual(0, [SELECT COUNT() FROM Payment WHERE Payment_Gateway_Token__c = 'gift-cert-00000676']);
+        Assert.areEqual(0, [SELECT COUNT() FROM CardPaymentMethod WHERE GatewayToken = 'gift-cert-00000676']);
     }
 
     @IsTest

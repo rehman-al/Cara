@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <description>Maps a centralized email gateway emailType (CARAEmailGatewayService) to its Marketing Cloud Send Definition and attribute wrapper name. One record per DeveloperName = email type. Ships with the 8 Cara email types; Send_Definition_Id__c is left blank where the real id is not yet confirmed.</description>
+    <label>Email Notification Setting</label>
+    <pluralLabel>Email Notification Settings</pluralLabel>
+    <visibility>Public</visibility>
+</CustomObject>

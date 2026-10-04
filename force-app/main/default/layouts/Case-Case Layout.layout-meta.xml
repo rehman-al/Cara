@@ -132,6 +132,10 @@
                 <behavior>Readonly</behavior>
                 <field>SuppliedPhone</field>
             </layoutItems>
+            <layoutItems>
+                <behavior>Edit</behavior>
+                <field>Contact_Method_Preference__c</field>
+            </layoutItems>
         </layoutColumns>
         <style>TwoColumnsTopToBottom</style>
     </layoutSections>
@@ -262,6 +266,14 @@
     <relatedLists>
         <fields>NAME</fields>
         <relatedList>Chat_Message__c.Case__c</relatedList>
+    </relatedLists>
+    <relatedLists>
+        <fields>NAME</fields>
+        <fields>Product_Name__c</fields>
+        <fields>Piece_Type__c</fields>
+        <fields>Status__c</fields>
+        <fields>CREATED_DATE</fields>
+        <relatedList>Custom_Product_Request__c.Case__c</relatedList>
     </relatedLists>
     <relatedObjects>ContactId</relatedObjects>
     <relatedObjects>AccountId</relatedObjects>

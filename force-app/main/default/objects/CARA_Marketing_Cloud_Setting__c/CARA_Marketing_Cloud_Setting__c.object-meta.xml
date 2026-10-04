@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customSettingsType>Hierarchy</customSettingsType>
+    <description>Holds the OAuth 2.0 client_credentials client id/secret used by CARAMarketingCloudAuthService to obtain a bearer token from carajewellers.my.salesforce.com/services/oauth2/token for the Marketing Cloud actions360 email send. Populate the Org Default value via Setup after deploy — never store the real values in source.</description>
+    <enableFeeds>false</enableFeeds>
+    <label>CARA Marketing Cloud Setting</label>
+    <visibility>Public</visibility>
+</CustomObject>

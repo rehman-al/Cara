@@ -16,8 +16,6 @@ IF(Customer_Lifetime_Spend__c &lt; 2500000, &quot;Elite Customer&quot;,
     <inlineHelpText>Automatically calculated from Customer Lifetime Spend.</inlineHelpText>
     <label>Customer Tags</label>
     <required>false</required>
-    <trackHistory>false</trackHistory>
-    <trackTrending>false</trackTrending>
     <type>Text</type>
     <unique>false</unique>
 </CustomField>

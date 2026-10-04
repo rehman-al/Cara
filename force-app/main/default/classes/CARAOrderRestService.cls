@@ -4,6 +4,10 @@ global with sharing class CARAOrderRestService {
     private static final String PAYMENT_STATUS_PENDING = 'Pending';
     private static final String PAYMENT_TYPE_SALE = 'Sale';
     private static final String PROCESSING_MODE_EXTERNAL = 'External';
+    private static final Map<String, Decimal> KYC_ORDER_TOTAL_THRESHOLD_BY_CURRENCY = new Map<String, Decimal>{
+        'AED' => 50000,
+        'GBP' => 20000
+    };
 
     @HttpPost
     global static void syncOrder() {
@@ -226,12 +230,19 @@ global with sharing class CARAOrderRestService {
                 LIMIT 1
             ];
             if (
+                payload.guest != true &&
                 !String.isBlank(payload.customerInfo.customerId) &&
                 !String.isBlank(accountRecord.External_ID__c) &&
                 accountRecord.External_ID__c != payload.customerInfo.customerId
             ) {
                 throw new IntegrationException('Customer email and customerId resolve to different accounts.');
             }
+            // Guest checkouts get a fresh, synthetic customerId from SFCC on every
+            // session even when the same person (same email) checks out again, so
+            // a customerId mismatch is expected and not a real identity conflict.
+            // applyAccountValues() below will refresh External_ID__c to the latest
+            // guest id for this account; only registered (non-guest) customers are
+            // held to a stable customerId.
         } else if (!String.isBlank(payload.customerInfo.customerId)) {
             String customerId = payload.customerInfo.customerId;
             List<Account> matchingAccounts = [
@@ -353,6 +364,9 @@ global with sharing class CARAOrderRestService {
         orderRecord.OrderSource__c = payload.channelType;
         orderRecord.Confirmation_Status__c = payload.confirmationStatus;
         orderRecord.Payment_Status__c = payload.paymentStatus;
+        // KYC requirement is derived from orderTotal (see isKycRequired), not
+        // from SFCC's c_isKycNeed or any N-Genius field.
+        orderRecord.isKycNeed__c = isKycRequired(payload);
         orderRecord.Shipping_Status__c = payload.shippingStatus;
         orderRecord.Export_Status__c = payload.exportStatus;
         orderRecord.CurrencyIsoCode__c = payload.currencyCode;
@@ -406,10 +420,13 @@ global with sharing class CARAOrderRestService {
         }
 
         List<PricebookEntry> entriesToInsert = new List<PricebookEntry>();
+        List<PricebookEntry> entriesToUpdate = new List<PricebookEntry>();
         for (Id productId : sampleItemByProductId.keySet()) {
-            if (!catalog.pricebookEntryByProductId.containsKey(productId)) {
-                CARAOrderPayload.ProductItem item = sampleItemByProductId.get(productId);
-                Decimal listPrice = item.basePrice == null ? item.price : item.basePrice;
+            CARAOrderPayload.ProductItem item = sampleItemByProductId.get(productId);
+            Decimal listPrice = item.basePrice == null ? item.price : item.basePrice;
+            PricebookEntry existingEntry = catalog.pricebookEntryByProductId.get(productId);
+
+            if (existingEntry == null) {
                 if (listPrice == null) {
                     throw new IntegrationException('A price is required to create a PricebookEntry for ' + item.productId + '.');
                 }
@@ -421,6 +438,15 @@ global with sharing class CARAOrderRestService {
                         IsActive = true
                     )
                 );
+            } else if (listPrice != null && existingEntry.UnitPrice != listPrice) {
+                // SFCC is the source of truth for current pricing. Without this,
+                // a later order referencing a product whose price has changed
+                // since its PricebookEntry was first created would fail with
+                // FIELD_INTEGRITY_EXCEPTION ("Order Product must have the same
+                // List Price as the related Price Book Entry") when syncOrderItems
+                // sets OrderItem.ListPrice from the fresh payload price.
+                existingEntry.UnitPrice = listPrice;
+                entriesToUpdate.add(existingEntry);
             }
         }
 
@@ -429,6 +455,9 @@ global with sharing class CARAOrderRestService {
             for (PricebookEntry entry : entriesToInsert) {
                 catalog.pricebookEntryByProductId.put(entry.Product2Id, entry);
             }
+        }
+        if (!entriesToUpdate.isEmpty()) {
+            Database.update(entriesToUpdate, AccessLevel.SYSTEM_MODE);
         }
     }
 
@@ -498,7 +527,25 @@ global with sharing class CARAOrderRestService {
                 orderItemRecord.ListPrice = payloadItem.basePrice;
                 itemsToInsert.add(orderItemRecord);
             } else {
-                itemsToUpdate.add(orderItemRecord);
+                // Product2Id/PricebookEntryId are read-only once an OrderItem exists.
+                // orderItemRecord still carries those fields from the existingByKey
+                // query (needed for the comparison above) — updating with that same
+                // instance fails with CANNOT_INSERT_UPDATE_ACTIVATE_ENTITY, so the
+                // update DML uses a fresh record with only the mutable fields.
+                OrderItem updateRecord = new OrderItem(Id = orderItemRecord.Id);
+                updateRecord.Quantity = orderItemRecord.Quantity;
+                updateRecord.UnitPrice = orderItemRecord.UnitPrice;
+                updateRecord.Storefront_Product_Name__c = orderItemRecord.Storefront_Product_Name__c;
+                updateRecord.Price_After_Item_Discount__c = orderItemRecord.Price_After_Item_Discount__c;
+                updateRecord.Price_After_Order_Discount__c = orderItemRecord.Price_After_Order_Discount__c;
+                updateRecord.Tax_Amount__c = orderItemRecord.Tax_Amount__c;
+                updateRecord.Tax_Rate__c = orderItemRecord.Tax_Rate__c;
+                updateRecord.Tax_Basis__c = orderItemRecord.Tax_Basis__c;
+                updateRecord.Tax_Class_ID__c = orderItemRecord.Tax_Class_ID__c;
+                updateRecord.Shipment_Group_Key__c = orderItemRecord.Shipment_Group_Key__c;
+                updateRecord.Is_Bonus_Item__c = orderItemRecord.Is_Bonus_Item__c;
+                updateRecord.Is_Gift__c = orderItemRecord.Is_Gift__c;
+                itemsToUpdate.add(updateRecord);
             }
         }
 
@@ -597,7 +644,12 @@ global with sharing class CARAOrderRestService {
                 throw new IntegrationException('Payment instrument ' + instrument.paymentInstrumentId + ' requires amount.');
             }
             if (instrument.paymentCard == null) {
-                throw new IntegrationException('Payment instrument ' + instrument.paymentInstrumentId + ' requires paymentCard.');
+                warnings.add(
+                    'Payment instrument ' + instrument.paymentInstrumentId +
+                    (String.isBlank(instrument.paymentMethodId) ? '' : ' (method ' + instrument.paymentMethodId + ')') +
+                    ' has no paymentCard and was not synced.'
+                );
+                continue;
             }
             if (!gatewayTokens.add(instrument.paymentInstrumentId)) {
                 throw new IntegrationException('Duplicate paymentInstrumentId in payload: ' + instrument.paymentInstrumentId);
@@ -659,7 +711,13 @@ global with sharing class CARAOrderRestService {
 
         Map<String, Payment> existingPaymentByToken = new Map<String, Payment>();
         for (Payment paymentRecord : [
-            SELECT Id, Status, ProcessingMode, Payment_Gateway_Token__c
+            // Status/ProcessingMode are read-only once a Payment exists and are
+            // never reassigned below — they must stay out of this SELECT, since
+            // Apex update DML resends every populated field on the sObject
+            // (not just the ones explicitly changed), and including either here
+            // would make every re-sync of an already-paid order fail with
+            // CANNOT_INSERT_UPDATE_ACTIVATE_ENTITY.
+            SELECT Id, Payment_Gateway_Token__c
             FROM Payment
             WHERE AccountId = :customerAccountId
             AND Payment_Gateway_Token__c IN :gatewayTokens
@@ -719,11 +777,33 @@ global with sharing class CARAOrderRestService {
         warnings.add('Payment is linked to the customer Account; the Order reference is stored in Payment.Comments.');
     }
 
+    /*
+     * KYC is required purely on orderTotal >= 50,000 in the order's
+     * settlement currency. The threshold is only meaningful in AED, and the
+     * integration accepts SFCC's currencyCode as free text with no
+     * conversion support, so a non-AED order is never blindly compared
+     * against the AED threshold.
+     */
+    private static Boolean isKycRequired(CARAOrderPayload payload) {
+        if (payload.orderTotal == null || String.isBlank(payload.currencyCode)) {
+            return false;
+        }
+        Decimal threshold = KYC_ORDER_TOTAL_THRESHOLD_BY_CURRENCY.get(payload.currencyCode.trim().toUpperCase());
+        if (threshold == null) {
+            return false;
+        }
+        return payload.orderTotal >= threshold;
+    }
+
     private static String mapOrderStatus(String sourceStatus) {
         if (sourceStatus == null) {
             return null;
         }
-        if (sourceStatus.equalsIgnoreCase('created') || sourceStatus.equalsIgnoreCase('draft')) {
+        if (
+            sourceStatus.equalsIgnoreCase('created') ||
+            sourceStatus.equalsIgnoreCase('draft') ||
+            sourceStatus.equalsIgnoreCase('new')
+        ) {
             return ORDER_STATUS_DRAFT;
         }
         if (sourceStatus.equalsIgnoreCase('activated')) {

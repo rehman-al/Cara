@@ -16,4 +16,64 @@
         <default>false</default>
         <label>Question</label>
     </standardValue>
+    <standardValue>
+        <fullName>Customer appointment</fullName>
+        <default>false</default>
+        <label>Customer appointment</label>
+    </standardValue>
+    <standardValue>
+        <fullName>Job offer</fullName>
+        <default>false</default>
+        <label>Job offer</label>
+    </standardValue>
+    <standardValue>
+        <fullName>Opening time</fullName>
+        <default>false</default>
+        <label>Opening time</label>
+    </standardValue>
+    <standardValue>
+        <fullName>Product info</fullName>
+        <default>false</default>
+        <label>Product info</label>
+    </standardValue>
+    <standardValue>
+        <fullName>Store info</fullName>
+        <default>false</default>
+        <label>Store info</label>
+    </standardValue>
+    <standardValue>
+        <fullName>B2B services</fullName>
+        <default>false</default>
+        <label>B2B services</label>
+    </standardValue>
+    <standardValue>
+        <fullName>Suppliers</fullName>
+        <default>false</default>
+        <label>Suppliers</label>
+    </standardValue>
+    <standardValue>
+        <fullName>Customer complaints</fullName>
+        <default>false</default>
+        <label>Customer complaints</label>
+    </standardValue>
+    <standardValue>
+        <fullName>Certification</fullName>
+        <default>false</default>
+        <label>Certification</label>
+    </standardValue>
+    <standardValue>
+        <fullName>Ready-made product</fullName>
+        <default>false</default>
+        <label>Ready-made product</label>
+    </standardValue>
+    <standardValue>
+        <fullName>Customized product</fullName>
+        <default>false</default>
+        <label>Customized product</label>
+    </standardValue>
+    <standardValue>
+        <fullName>Ready-made product modification</fullName>
+        <default>false</default>
+        <label>Ready-made product modification</label>
+    </standardValue>
 </StandardValueSet>

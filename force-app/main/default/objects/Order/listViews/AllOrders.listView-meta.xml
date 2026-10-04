@@ -9,6 +9,7 @@
     <columns>CONTRACT.CONTRACT_NUMBER</columns>
     <columns>CREATEDBY_USER.ALIAS</columns>
     <columns>OrderSource__c</columns>
+    <columns>Contact__c</columns>
     <filterScope>Everything</filterScope>
     <label>All Orders</label>
 </ListView>
