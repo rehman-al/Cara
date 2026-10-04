@@ -57,6 +57,8 @@ private class CARAOrderRestServiceTest {
         Order synchronizedOrder = [
             SELECT
                 AccountId,
+                Contact__c,
+                Customer_Email__c,
                 EffectiveDate,
                 Status,
                 OrderSource__c,
@@ -67,6 +69,11 @@ private class CARAOrderRestServiceTest {
             WHERE OrderReferenceNumber = '00000429'
             LIMIT 1
         ];
+        Assert.areEqual(
+            [SELECT Id FROM Contact WHERE Email = 'nabeel@20three.digital' LIMIT 1].Id,
+            synchronizedOrder.Contact__c
+        );
+        Assert.areEqual('nabeel@20three.digital', synchronizedOrder.Customer_Email__c);
         Assert.areEqual(Date.newInstance(2026, 8, 20), synchronizedOrder.EffectiveDate);
         Assert.areEqual('Draft', synchronizedOrder.Status);
         Assert.areEqual('storefront', synchronizedOrder.OrderSource__c);
@@ -477,6 +484,43 @@ private class CARAOrderRestServiceTest {
         ];
         Assert.isTrue(activatedPricebook.IsActive);
         Assert.areEqual(1, [SELECT COUNT() FROM Order WHERE OrderReferenceNumber = '00000429']);
+    }
+
+    @IsTest
+    static void personAccountOrderIsLinkedToPersonContact() {
+        // Same path as the guest Customise form: the Link_Case_To_Account_By_Email
+        // flow creates the Person Account from the Case's supplied details.
+        // (The PersonAccount record type isn't available to profiles here, so
+        // the test can't insert one directly.)
+        insert new Case(
+            Subject = 'Customisation Request - Necklace',
+            Origin = 'Web',
+            SuppliedName = 'Rehman Ali',
+            SuppliedEmail = 'nabeel@20three.digital'
+        );
+        Account personAccount = [
+            SELECT Id, PersonContactId
+            FROM Account
+            WHERE PersonEmail = 'nabeel@20three.digital' AND IsPersonAccount = true
+            LIMIT 1
+        ];
+
+        Map<String, Object> payload = buildFullPayload();
+        payload.put('guest', false);
+
+        Test.startTest();
+        invokeService(JSON.serialize(payload));
+        Test.stopTest();
+
+        Assert.areEqual(200, RestContext.response.statusCode, RestContext.response.responseBody.toString());
+        Order synchronizedOrder = [
+            SELECT AccountId, Contact__c, Customer_Email__c
+            FROM Order
+            WHERE OrderReferenceNumber = '00000429'
+        ];
+        Assert.areEqual(personAccount.Id, synchronizedOrder.AccountId);
+        Assert.areEqual(personAccount.PersonContactId, synchronizedOrder.Contact__c);
+        Assert.areEqual('nabeel@20three.digital', synchronizedOrder.Customer_Email__c);
     }
 
     private static void invokeService(String requestBody) {
