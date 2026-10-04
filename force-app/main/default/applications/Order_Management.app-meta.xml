@@ -2,6 +2,24 @@
 <CustomApplication xmlns="http://soap.sforce.com/2006/04/metadata">
     <actionOverrides>
         <actionName>View</actionName>
+        <comment>Activates SFCC_Order_Staging_Record_Page (Retry Sync action) as the record view for this app.</comment>
+        <content>SFCC_Order_Staging_Record_Page</content>
+        <formFactor>Large</formFactor>
+        <skipRecordTypeSelect>false</skipRecordTypeSelect>
+        <type>Flexipage</type>
+        <pageOrSobjectType>SFCC_Order_Staging__c</pageOrSobjectType>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>View</actionName>
+        <comment>Activates SFCC_Order_Staging_Record_Page (Retry Sync action) as the record view for this app.</comment>
+        <content>SFCC_Order_Staging_Record_Page</content>
+        <formFactor>Small</formFactor>
+        <skipRecordTypeSelect>false</skipRecordTypeSelect>
+        <type>Flexipage</type>
+        <pageOrSobjectType>SFCC_Order_Staging__c</pageOrSobjectType>
+    </actionOverrides>
+    <actionOverrides>
+        <actionName>View</actionName>
         <comment>Action override created by Lightning App Builder during activation.</comment>
         <content>Case_Lightning_Page</content>
         <formFactor>Large</formFactor>
@@ -37,9 +55,13 @@
     <tabs>Store_Appointment_Booking__c</tabs>
     <tabs>Store__c</tabs>
     <tabs>Store_Time_Slot__c</tabs>
+    <tabs>SFCC_Order_Staging__c</tabs>
     <uiType>Lightning</uiType>
     <utilityBar>Order_Management_UtilityBar</utilityBar>
     <workspaceConfig>
+        <mappings>
+            <tab>SFCC_Order_Staging__c</tab>
+        </mappings>
         <mappings>
             <tab>Store_Appointment_Booking__c</tab>
         </mappings>

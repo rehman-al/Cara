@@ -187,12 +187,16 @@
     <tabs>Store_Appointment_Booking__c</tabs>
     <tabs>Store__c</tabs>
     <tabs>Store_Time_Slot__c</tabs>
+    <tabs>SFCC_Order_Staging__c</tabs>
     <workspaceConfig>
         <mappings>
             <tab>Customisation_Option__c</tab>
         </mappings>
         <mappings>
             <tab>MobileLanding</tab>
+        </mappings>
+        <mappings>
+            <tab>SFCC_Order_Staging__c</tab>
         </mappings>
         <mappings>
             <tab>Store_Appointment_Booking__c</tab>

@@ -32,10 +32,27 @@ private class CARAOrderRestServiceTest {
         Assert.areEqual(1, [SELECT COUNT() FROM Account WHERE External_ID__c = 'abmekYkHcUmbwRwuhKxGYYxrs0']);
         Assert.areEqual(1, [SELECT COUNT() FROM Contact WHERE Email = 'nabeel@20three.digital']);
         Assert.areEqual(1, [SELECT COUNT() FROM Order WHERE OrderReferenceNumber = '00000429']);
+        Assert.areEqual(
+            1,
+            [SELECT COUNT() FROM SFCC_Order_Staging__c WHERE SFCC_Order_Number__c = '00000429'],
+            'A repeat API call for the same orderNo must reuse the same staging row, not create a second one.'
+        );
         Assert.areEqual(1, [SELECT COUNT() FROM OrderItem WHERE Line_Item_External_ID__c = '9b3cbdd3b1bf7ba6db4a030b6c']);
         Assert.areEqual(1, [SELECT COUNT() FROM Shipment WHERE Shipment_External_ID__c = '00000429:me']);
         Assert.areEqual(1, [SELECT COUNT() FROM Payment WHERE Payment_Gateway_Token__c = '31640bb6c96ece3042d0035177']);
         Assert.areEqual(1, [SELECT COUNT() FROM CardPaymentMethod WHERE GatewayToken = '31640bb6c96ece3042d0035177']);
+
+        SFCC_Order_Staging__c stagingRecord = [
+            SELECT Sync_Status__c, Salesforce_Order__c, Retry_Count__c, Sync_Error__c, Order_Payload__c
+            FROM SFCC_Order_Staging__c
+            WHERE SFCC_Order_Number__c = '00000429'
+            LIMIT 1
+        ];
+        Assert.areEqual('Synced', stagingRecord.Sync_Status__c);
+        Assert.isNotNull(stagingRecord.Salesforce_Order__c);
+        Assert.areEqual(0, stagingRecord.Retry_Count__c, 'The original API call must not count as a retry.');
+        Assert.isNull(stagingRecord.Sync_Error__c);
+        Assert.isTrue(stagingRecord.Order_Payload__c.contains('00000429'), 'The original SFCC payload must be preserved for retry.');
 
         Order synchronizedOrder = [
             SELECT
@@ -303,6 +320,18 @@ private class CARAOrderRestServiceTest {
         Assert.areEqual(0, [SELECT COUNT() FROM Shipment]);
         Assert.areEqual(0, [SELECT COUNT() FROM Payment]);
         Assert.areEqual(0, [SELECT COUNT() FROM CardPaymentMethod]);
+
+        // The staging record must survive even though Order creation failed,
+        // so the incoming payload is never lost and Retry Sync has data to
+        // work with once orderNo is supplied.
+        List<SFCC_Order_Staging__c> stagingRecords = [
+            SELECT Sync_Status__c, Sync_Error__c, Order_Payload__c
+            FROM SFCC_Order_Staging__c
+        ];
+        Assert.areEqual(1, stagingRecords.size());
+        Assert.areEqual('Failed', stagingRecords[0].Sync_Status__c);
+        Assert.isTrue(stagingRecords[0].Sync_Error__c.contains('orderNo'));
+        Assert.isTrue(stagingRecords[0].Order_Payload__c.contains('productItems'), 'The original payload must be preserved for retry.');
     }
 
     // =========================================================
@@ -346,6 +375,57 @@ private class CARAOrderRestServiceTest {
         Assert.areEqual(1, [SELECT COUNT() FROM Payment WHERE Payment_Gateway_Token__c = '31640bb6c96ece3042d0035177']);
         Assert.areEqual(0, [SELECT COUNT() FROM Payment WHERE Payment_Gateway_Token__c = 'gift-cert-00000676']);
         Assert.areEqual(0, [SELECT COUNT() FROM CardPaymentMethod WHERE GatewayToken = 'gift-cert-00000676']);
+    }
+
+    // =========================================================
+    // Guest checkout: no pre-existing Account/Contact, and SFCC may omit
+    // customerId entirely for a guest session. syncCustomer() must create a
+    // fresh Account+Contact from customerInfo.email alone — it must not
+    // assume or require any pre-existing customer relationship.
+    // =========================================================
+    @IsTest
+    static void guestOrderWithNoPriorCustomerRecordSyncsSuccessfully() {
+        Map<String, Object> payload = buildFullPayload();
+        payload.put('orderNo', '00000900');
+        payload.put('guest', true);
+        Map<String, Object> customerInfo = (Map<String, Object>) payload.get('customerInfo');
+        customerInfo.put('customerId', null);
+        customerInfo.put('email', 'guest-checkout@20three.digital');
+        customerInfo.put('customerName', 'Guest Checkout');
+
+        Assert.areEqual(0, [SELECT COUNT() FROM Contact WHERE Email = 'guest-checkout@20three.digital']);
+
+        Test.startTest();
+        invokeService(JSON.serialize(payload));
+        Test.stopTest();
+
+        Assert.areEqual(200, RestContext.response.statusCode, RestContext.response.responseBody.toString());
+
+        Contact guestContact = [
+            SELECT AccountId, Is_Guest__c, Account.Is_Guest__c
+            FROM Contact
+            WHERE Email = 'guest-checkout@20three.digital'
+            LIMIT 1
+        ];
+        Assert.isTrue(guestContact.Is_Guest__c);
+        Assert.isTrue(guestContact.Account.Is_Guest__c);
+
+        Order guestOrder = [SELECT Id, AccountId, Status FROM Order WHERE OrderReferenceNumber = '00000900' LIMIT 1];
+        Assert.areEqual(guestContact.AccountId, guestOrder.AccountId);
+        Assert.areEqual(
+            1,
+            [SELECT COUNT() FROM OrderItem WHERE OrderId = :guestOrder.Id],
+            'Guest orders must create Order Products the same way logged-in orders do.'
+        );
+
+        SFCC_Order_Staging__c stagingRecord = [
+            SELECT Sync_Status__c, Salesforce_Order__c
+            FROM SFCC_Order_Staging__c
+            WHERE SFCC_Order_Number__c = '00000900'
+            LIMIT 1
+        ];
+        Assert.areEqual('Synced', stagingRecord.Sync_Status__c);
+        Assert.areEqual(guestOrder.Id, stagingRecord.Salesforce_Order__c);
     }
 
     @IsTest

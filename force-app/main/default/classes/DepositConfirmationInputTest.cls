@@ -5,6 +5,7 @@ private class DepositConfirmationInputTest {
     static void testNormalCalculation() {
         DepositConfirmationInput input = new DepositConfirmationInput();
         input.FirstName = 'Ahsan';
+        input.orderLink = 'https://cara.ae/orders/ORD-9988';
         input.orderNumber = 'MM-204583';
         input.paymentDate = 'Monday, 5 October 2026';
         input.cardType = 'Visa';

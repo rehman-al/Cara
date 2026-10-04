@@ -1,0 +1,13 @@
+<template>
+    <lightning-card title="Order Sync" icon-name="standard:sync">
+        <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+            <p class="slds-m-bottom_small slds-text-color_weak">{statusMessage}</p>
+            <lightning-button
+                variant="brand"
+                label="Retry Sync"
+                onclick={handleRetry}
+                disabled={isRetryDisabled}
+            ></lightning-button>
+        </div>
+    </lightning-card>
+</template>

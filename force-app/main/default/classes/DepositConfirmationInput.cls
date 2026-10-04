@@ -1,5 +1,6 @@
 public class DepositConfirmationInput {
     @AuraEnabled public String FirstName { get; set; }
+    @AuraEnabled public String orderLink { get; set; }
     @AuraEnabled public String orderNumber { get; set; }
     @AuraEnabled public String paymentDate { get; set; }
     @AuraEnabled public String cardType { get; set; }

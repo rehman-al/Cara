@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Balance_Payment_Reference__c</fullName>
+    <description>SFCC/N-Genius transaction reference for the completed balance (second) payment, set by CARABalancePaymentConfirmationService once SFCC confirms successful payment. Used to make the confirmation callback idempotent.</description>
+    <externalId>false</externalId>
+    <label>Balance Payment Reference</label>
+    <length>180</length>
+    <required>false</required>
+    <trackHistory>false</trackHistory>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

@@ -26,6 +26,11 @@
                 <label>Already Paid</label>
             </value>
             <value>
+                <fullName>Paid</fullName>
+                <default>false</default>
+                <label>Paid</label>
+            </value>
+            <value>
                 <fullName>Error</fullName>
                 <default>false</default>
                 <label>Error</label>

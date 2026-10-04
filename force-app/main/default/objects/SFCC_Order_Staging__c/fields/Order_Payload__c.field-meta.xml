@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Order_Payload__c</fullName>
+    <description>Raw JSON body exactly as received from SFCC on /cara/createOrder. This is the sole source of truth for Retry Sync — the centralized sync service re-parses this field, so SFCC never needs to resend the request. Contains customer name/email/address; never contains card numbers, CVV, tokens or credentials (SFCC&apos;s payload itself only carries a masked card number).</description>
+    <label>Order Payload</label>
+    <length>131072</length>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>LongTextArea</type>
+    <visibleLines>10</visibleLines>
+</CustomField>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Tier_1_Customer__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>True for the top 10% of eligible customers by Customer_Lifetime_Spend__c. Recalculated by CustomerTier1RankingBatch; do not edit manually. Consumed by Data Cloud as the Tier-1 segment qualification flag.</description>
+    <inlineHelpText>Automatically set for the top 10 percent of eligible customers ranked by Lifetime Spend.</inlineHelpText>
+    <label>Tier-1 Customer</label>
+    <trackFeedHistory>false</trackFeedHistory>
+    <type>Checkbox</type>
+</CustomField>

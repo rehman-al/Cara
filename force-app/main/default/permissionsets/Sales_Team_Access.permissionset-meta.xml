@@ -7,6 +7,11 @@
     <description>Sales team: manage Accounts/Contacts, work Sales Follow-up cases, and capture Custom Product Requests. Read-only on Orders and on system-written basket/deposit fields.</description>
     <fieldPermissions>
         <editable>false</editable>
+        <field>Account.Tier_1_Customer__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
         <field>Case.Case_Record_Type_Developer_Name__c</field>
         <readable>true</readable>
     </fieldPermissions>
