@@ -78,6 +78,8 @@ public class CARAOrderPayload {
         public Decimal adjustedTax;
         public Decimal basePrice;
         public Boolean bonusProductLineItem;
+        public Decimal c_depositAmount;
+        public Decimal c_quotedUnitPrice;
         public Boolean gift;
         public String itemId;
         public String itemText;

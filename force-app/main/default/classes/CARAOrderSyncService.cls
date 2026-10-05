@@ -143,6 +143,7 @@ public with sharing class CARAOrderSyncService {
             syncOrderItems(orderRecord.Id, payload.productItems, catalog);
 
             Set<String> warnings = new Set<String>();
+            linkCustomProductRequests(payload, orderRecord, customer.accountRecord.Id, catalog, warnings);
             syncShipments(payload, warnings);
             syncPayments(payload, customer, orderRecord, warnings);
 
@@ -860,6 +861,111 @@ public with sharing class CARAOrderSyncService {
         }
         if (!itemsToUpdate.isEmpty()) {
             update itemsToUpdate;
+        }
+    }
+
+    /**
+     * Links a custom (bespoke) order's Case back to the Order so the
+     * "Product is Ready" flows (which read Case.Related_Order__c) no longer
+     * need that link set by hand. SFCC does not echo the Basket_Id__c,
+     * CPR number, or Case number on the order, so there is no exact key —
+     * a custom line item is instead recognized by carrying c_depositAmount
+     * and/or c_quotedUnitPrice, and is matched to the one open (Approved,
+     * basket Created, not yet linked) Custom Product Request for that
+     * Account/Product whose Deposit_Amount__c/Selling_Price__c agree. If
+     * zero or more than one Custom Product Request match, this deliberately
+     * leaves Case.Related_Order__c unset and raises a warning rather than
+     * guessing — the same reconciliation pattern used for a customerId
+     * conflict in syncRegisteredCustomer().
+     */
+    private static void linkCustomProductRequests(
+        CARAOrderPayload payload,
+        Order orderRecord,
+        Id accountId,
+        CatalogContext catalog,
+        Set<String> warnings
+    ) {
+        if (payload.productItems == null || payload.productItems.isEmpty()) {
+            return;
+        }
+
+        List<CARAOrderPayload.ProductItem> customItems = new List<CARAOrderPayload.ProductItem>();
+        Set<Id> productIds = new Set<Id>();
+        for (CARAOrderPayload.ProductItem item : payload.productItems) {
+            if (item.c_depositAmount == null && item.c_quotedUnitPrice == null) {
+                continue;
+            }
+            Product2 productRecord = catalog.productByCode.get(item.productId);
+            if (productRecord == null) {
+                continue;
+            }
+            customItems.add(item);
+            productIds.add(productRecord.Id);
+        }
+        if (customItems.isEmpty()) {
+            return;
+        }
+
+        Map<Id, List<Custom_Product_Request__c>> openRequestsByProductId = new Map<Id, List<Custom_Product_Request__c>>();
+        for (Custom_Product_Request__c cprRecord : [
+            SELECT Id, Product__c, Deposit_Amount__c, Selling_Price__c, Case__c
+            FROM Custom_Product_Request__c
+            WHERE Product__c IN :productIds
+            AND Case__r.AccountId = :accountId
+            AND Case__r.Related_Order__c = null
+            AND Status__c = 'Approved'
+            AND Basket_Status__c = 'Created'
+        ]) {
+            List<Custom_Product_Request__c> candidatesForProduct = openRequestsByProductId.get(cprRecord.Product__c);
+            if (candidatesForProduct == null) {
+                candidatesForProduct = new List<Custom_Product_Request__c>();
+                openRequestsByProductId.put(cprRecord.Product__c, candidatesForProduct);
+            }
+            candidatesForProduct.add(cprRecord);
+        }
+
+        Map<Id, Id> orderIdByCaseId = new Map<Id, Id>();
+        for (CARAOrderPayload.ProductItem item : customItems) {
+            Id productId = catalog.productByCode.get(item.productId).Id;
+            List<Custom_Product_Request__c> candidates = openRequestsByProductId.get(productId);
+            if (candidates == null || candidates.isEmpty()) {
+                warnings.add(
+                    'No open, Approved Custom Product Request found for product ' + item.productId +
+                    ' on order ' + payload.orderNo + '; Case.Related_Order__c must be set manually.'
+                );
+                continue;
+            }
+
+            List<Custom_Product_Request__c> matches = new List<Custom_Product_Request__c>();
+            for (Custom_Product_Request__c candidate : candidates) {
+                Boolean depositMatches = item.c_depositAmount == null || candidate.Deposit_Amount__c == item.c_depositAmount;
+                Boolean priceMatches = item.c_quotedUnitPrice == null || candidate.Selling_Price__c == item.c_quotedUnitPrice;
+                if (depositMatches && priceMatches) {
+                    matches.add(candidate);
+                }
+            }
+
+            if (matches.isEmpty()) {
+                warnings.add(
+                    'No Custom Product Request matches the deposit/quoted price on order ' + payload.orderNo +
+                    ' for product ' + item.productId + '; Case.Related_Order__c must be set manually.'
+                );
+            } else if (matches.size() > 1) {
+                warnings.add(
+                    'Multiple Custom Product Requests match order ' + payload.orderNo + ' for product ' + item.productId +
+                    '; Case.Related_Order__c must be set manually to avoid linking the wrong one.'
+                );
+            } else {
+                orderIdByCaseId.put(matches[0].Case__c, orderRecord.Id);
+            }
+        }
+
+        if (!orderIdByCaseId.isEmpty()) {
+            List<Case> casesToUpdate = new List<Case>();
+            for (Id caseId : orderIdByCaseId.keySet()) {
+                casesToUpdate.add(new Case(Id = caseId, Related_Order__c = orderIdByCaseId.get(caseId)));
+            }
+            update casesToUpdate;
         }
     }
 

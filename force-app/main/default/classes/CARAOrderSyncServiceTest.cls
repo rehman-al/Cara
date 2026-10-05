@@ -366,6 +366,132 @@ private class CARAOrderSyncServiceTest {
         );
     }
 
+    // =========================================================
+    // Custom Product Request -> Case linking: SFCC never echoes the
+    // Basket_Id__c, CPR number, or Case number back on a custom order, so a
+    // custom line item is only recognizable by carrying c_depositAmount/
+    // c_quotedUnitPrice. These must match exactly one open (Approved, basket
+    // Created, not yet linked) Custom Product Request before Case.Related_
+    // Order__c is set automatically — zero or multiple matches raise a
+    // warning instead of guessing.
+    // =========================================================
+    @IsTest
+    static void customOrderLinksCaseToOrderWhenExactlyOneApprovedRequestMatches() {
+        Id productId = [SELECT Id FROM Product2 WHERE ProductCode = :PRODUCT_CODE LIMIT 1].Id;
+        Account account = new Account(Name = 'Test Customer', Is_Guest__c = false, External_ID__c = 'cust-cpr-520');
+        insert account;
+        insert new Contact(AccountId = account.Id, LastName = 'Customer', Email = 'cpr-match@20three.digital', Is_Guest__c = false);
+        Case caseRecord = new Case(AccountId = account.Id);
+        insert caseRecord;
+        insert new Custom_Product_Request__c(
+            Case__c = caseRecord.Id,
+            Product__c = productId,
+            Product_Name__c = 'CARA Sync Test Product',
+            Deposit_Amount__c = 100,
+            Selling_Price__c = 400,
+            Status__c = 'Approved',
+            Basket_Status__c = 'Created',
+            Quantity__c = 1
+        );
+
+        Map<String, Object> payload = addCustomProductFields(
+            buildPayload('00000520', false, 'cpr-match@20three.digital', 'cust-cpr-520'),
+            100,
+            400
+        );
+        Id stagingId = CARAOrderSyncService.capturePayload('00000520', JSON.serialize(payload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome outcome = CARAOrderSyncService.syncFromStaging(stagingId);
+        Test.stopTest();
+
+        Assert.isTrue(outcome.success, outcome.message);
+        Case updatedCase = [SELECT Related_Order__c FROM Case WHERE Id = :caseRecord.Id];
+        Assert.areEqual(outcome.orderId, updatedCase.Related_Order__c, 'The matching Custom Product Request\'s Case must be linked to the new Order.');
+    }
+
+    @IsTest
+    static void customOrderWithNoMatchingRequestLeavesCaseUnlinkedAndWarns() {
+        Map<String, Object> payload = addCustomProductFields(
+            buildPayload('00000521', false, 'cpr-nomatch@20three.digital', 'cust-cpr-521'),
+            100,
+            400
+        );
+        Id stagingId = CARAOrderSyncService.capturePayload('00000521', JSON.serialize(payload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome outcome = CARAOrderSyncService.syncFromStaging(stagingId);
+        Test.stopTest();
+
+        Assert.isTrue(outcome.success, outcome.message);
+        Assert.areEqual(1, outcome.warnings.size());
+        Assert.isTrue(
+            outcome.warnings[0].contains('No open, Approved Custom Product Request'),
+            'A custom line item with no matching Custom Product Request must raise a warning instead of failing the order.'
+        );
+    }
+
+    @IsTest
+    static void customOrderWithAmbiguousMatchesLeavesCaseUnlinkedAndWarns() {
+        Id productId = [SELECT Id FROM Product2 WHERE ProductCode = :PRODUCT_CODE LIMIT 1].Id;
+        Account account = new Account(Name = 'Test Customer', Is_Guest__c = false, External_ID__c = 'cust-cpr-522');
+        insert account;
+        insert new Contact(AccountId = account.Id, LastName = 'Customer', Email = 'cpr-ambiguous@20three.digital', Is_Guest__c = false);
+        Case firstCase = new Case(AccountId = account.Id);
+        Case secondCase = new Case(AccountId = account.Id);
+        insert new List<Case>{ firstCase, secondCase };
+        insert new List<Custom_Product_Request__c>{
+            new Custom_Product_Request__c(
+                Case__c = firstCase.Id,
+                Product__c = productId,
+                Product_Name__c = 'CARA Sync Test Product',
+                Deposit_Amount__c = 100,
+                Selling_Price__c = 400,
+                Status__c = 'Approved',
+                Basket_Status__c = 'Created',
+                Quantity__c = 1
+            ),
+            new Custom_Product_Request__c(
+                Case__c = secondCase.Id,
+                Product__c = productId,
+                Product_Name__c = 'CARA Sync Test Product',
+                Deposit_Amount__c = 100,
+                Selling_Price__c = 400,
+                Status__c = 'Approved',
+                Basket_Status__c = 'Created',
+                Quantity__c = 1
+            )
+        };
+
+        Map<String, Object> payload = addCustomProductFields(
+            buildPayload('00000522', false, 'cpr-ambiguous@20three.digital', 'cust-cpr-522'),
+            100,
+            400
+        );
+        Id stagingId = CARAOrderSyncService.capturePayload('00000522', JSON.serialize(payload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome outcome = CARAOrderSyncService.syncFromStaging(stagingId);
+        Test.stopTest();
+
+        Assert.isTrue(outcome.success, outcome.message);
+        Assert.areEqual(1, outcome.warnings.size());
+        Assert.isTrue(
+            outcome.warnings[0].contains('Multiple Custom Product Requests match'),
+            'Ambiguous matches must raise a warning instead of guessing which Case to link.'
+        );
+        Assert.isNull([SELECT Related_Order__c FROM Case WHERE Id = :firstCase.Id].Related_Order__c);
+        Assert.isNull([SELECT Related_Order__c FROM Case WHERE Id = :secondCase.Id].Related_Order__c);
+    }
+
+    private static Map<String, Object> addCustomProductFields(Map<String, Object> payload, Decimal depositAmount, Decimal quotedUnitPrice) {
+        List<Object> items = (List<Object>) payload.get('productItems');
+        Map<String, Object> item = (Map<String, Object>) items[0];
+        item.put('c_depositAmount', depositAmount);
+        item.put('c_quotedUnitPrice', quotedUnitPrice);
+        return payload;
+    }
+
     private static Map<String, Object> buildPayload(String orderNo, Boolean guest, String email, String customerId) {
         Map<String, Object> billingAddress = new Map<String, Object>{
             'address1' => '1 Test Street',
