@@ -67,7 +67,8 @@ private class CARADepositBasketQueueableTest {
 
     private static Custom_Product_Request__c queryRequest(Id requestId) {
         return [
-            SELECT Basket_Id__c, Deposit_Link__c, Deposit_Amount__c, Order_Total__c, Basket_Status__c, Basket_Log__c
+            SELECT Status__c, Basket_Id__c, Deposit_Link__c, Deposit_Amount__c,
+                Order_Total__c, Basket_Status__c, Basket_Log__c
             FROM Custom_Product_Request__c
             WHERE Id = :requestId
         ];
@@ -95,6 +96,7 @@ private class CARADepositBasketQueueableTest {
         System.assertEquals('/pay/deposit?basketId=BASKET-1', result.Deposit_Link__c);
         System.assertEquals(250, result.Deposit_Amount__c);
         System.assertEquals(1000, result.Order_Total__c);
+        System.assertEquals('Approved', result.Status__c, 'A successful basket request must remain Approved.');
         System.assertEquals('Created', result.Basket_Status__c);
         System.assert(result.Basket_Log__c.contains('Deposit basket created'));
         System.assert(result.Basket_Log__c.contains('notification: Sent to shopper@example.com'));
@@ -123,6 +125,7 @@ private class CARADepositBasketQueueableTest {
 
         System.assertEquals(0, mock.capturedRequests.size(), 'Missing SKU must block the callout entirely.');
         Custom_Product_Request__c result = queryRequest(requestRecord.Id);
+        System.assertEquals('Under Review', result.Status__c, 'A validation failure must undo the premature approval.');
         System.assertEquals('Error', result.Basket_Status__c);
         System.assert(result.Basket_Log__c.contains('Product SKU'));
     }
@@ -166,6 +169,7 @@ private class CARADepositBasketQueueableTest {
         Test.stopTest();
 
         Custom_Product_Request__c result = queryRequest(requestRecord.Id);
+        System.assertEquals('Under Review', result.Status__c, 'A gateway failure must return the CPR to review.');
         System.assertEquals('Error', result.Basket_Status__c);
         System.assert(result.Basket_Log__c.contains(CARASfscSplitPaymentService.ERROR_GATEWAY));
         System.assertEquals(2, mock.capturedRequests.size(), 'A 502 gets exactly one retry.');
@@ -189,6 +193,7 @@ private class CARADepositBasketQueueableTest {
         Test.stopTest();
 
         Custom_Product_Request__c result = queryRequest(requestRecord.Id);
+        System.assertEquals('Under Review', result.Status__c, 'An authentication failure must return the CPR to review.');
         System.assertEquals('Error', result.Basket_Status__c);
         System.assert(result.Basket_Log__c.contains(CARASfscSplitPaymentService.ERROR_AUTH));
         System.assertEquals(1, mock.capturedRequests.size(), '401 must never be retried.');

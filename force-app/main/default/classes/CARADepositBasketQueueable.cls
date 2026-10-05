@@ -159,6 +159,11 @@ public with sharing class CARADepositBasketQueueable implements Queueable, Datab
 
 
     private static void fail(Custom_Product_Request__c requestRecord, String errorCategory, String errorMessage) {
+        // Approval is only valid once SFCC/MRT has accepted the deposit-basket
+        // request. The callout runs asynchronously after the approval update
+        // commits, so a failed request must move the CPR back into review
+        // instead of leaving it in the Approved state without a payment link.
+        requestRecord.Status__c = 'Under Review';
         requestRecord.Basket_Status__c = 'Error';
         appendLog(requestRecord, '[' + errorCategory + '] ' + errorMessage);
         update requestRecord;
