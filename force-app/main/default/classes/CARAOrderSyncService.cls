@@ -132,7 +132,12 @@ public with sharing class CARAOrderSyncService {
 
             CatalogContext catalog = resolveCatalog(payload.productItems);
             CustomerContext customer = syncCustomer(payload);
-            Order orderRecord = syncOrderRecord(payload, customer.accountRecord.Id, catalog.pricebookId);
+            Order orderRecord = syncOrderRecord(
+                payload,
+                customer.accountRecord.Id,
+                customer.contactRecord.Id,
+                catalog.pricebookId
+            );
 
             ensurePricebookEntries(catalog, payload.productItems);
             syncOrderItems(orderRecord.Id, payload.productItems, catalog);
@@ -628,7 +633,7 @@ public with sharing class CARAOrderSyncService {
         }
     }
 
-    private static Order syncOrderRecord(CARAOrderPayload payload, Id accountId, Id pricebookId) {
+    private static Order syncOrderRecord(CARAOrderPayload payload, Id accountId, Id contactId, Id pricebookId) {
         List<Order> matchingOrders = [
             SELECT Id, Status, Pricebook2Id
             FROM Order
@@ -649,6 +654,10 @@ public with sharing class CARAOrderSyncService {
         }
 
         orderRecord.AccountId = accountId;
+        // For a Person Account this is its auto-created PersonContact. Drives
+        // Customer_Email__c (formula on Contact__r.Email), which the balance
+        // link and order email flows depend on.
+        orderRecord.Contact__c = contactId;
         orderRecord.OrderReferenceNumber = payload.orderNo;
         orderRecord.EffectiveDate = resolveCreationDatetime(payload.creationDate).dateGmt();
         orderRecord.Status = targetStatus;
