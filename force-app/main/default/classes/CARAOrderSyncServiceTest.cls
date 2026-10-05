@@ -197,6 +197,175 @@ private class CARAOrderSyncServiceTest {
         );
     }
 
+    // =========================================================
+    // Registered customer whose email already resolves to an Account tied
+    // to a different SFCC customerId: rather than blocking the order (or
+    // silently overwriting the existing identity), this creates a separate
+    // Account+Contact for the order and links it back via Duplicate_Of__c
+    // so Ops can find and reconcile the two.
+    // =========================================================
+    @IsTest
+    static void customerIdMismatchCreatesLinkedDuplicateAccountInsteadOfBlocking() {
+        Map<String, Object> originalPayload = buildPayload('00000509', false, 'duplicate-identity@20three.digital', 'cust-509-original');
+        Id originalStagingId = CARAOrderSyncService.capturePayload('00000509', JSON.serialize(originalPayload));
+        CARAOrderSyncService.SyncOutcome originalOutcome = CARAOrderSyncService.syncFromStaging(originalStagingId);
+        Assert.isTrue(originalOutcome.success, originalOutcome.message);
+        Id originalAccountId = [SELECT AccountId FROM Order WHERE Id = :originalOutcome.orderId].AccountId;
+
+        Map<String, Object> conflictingPayload = buildPayload('00000510', false, 'duplicate-identity@20three.digital', 'cust-509-conflict');
+        Id conflictingStagingId = CARAOrderSyncService.capturePayload('00000510', JSON.serialize(conflictingPayload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome conflictingOutcome = CARAOrderSyncService.syncFromStaging(conflictingStagingId);
+        Test.stopTest();
+
+        Assert.isTrue(conflictingOutcome.success, conflictingOutcome.message);
+        Id duplicateAccountId = [SELECT AccountId FROM Order WHERE Id = :conflictingOutcome.orderId].AccountId;
+        Assert.areNotEqual(originalAccountId, duplicateAccountId, 'A customerId conflict must create a separate Account, not block the order or merge into the original.');
+
+        Account duplicateAccount = [SELECT Duplicate_Of__c FROM Account WHERE Id = :duplicateAccountId];
+        Assert.areEqual(originalAccountId, duplicateAccount.Duplicate_Of__c, 'The duplicate Account must be linked back to the original for tracking.');
+    }
+
+    // =========================================================
+    // Guest and Registered identities are modeled as two separate
+    // Accounts. A Guest Account is always reused across repeat guest
+    // orders (keyed on email, since SFCC's guest customerId changes every
+    // checkout session) and is never merged into, or allowed to overwrite,
+    // the Registered Account for the same person.
+    // =========================================================
+    @IsTest
+    static void guestOrderWithExistingRegisteredParentCreatesLinkedGuestAccount() {
+        Map<String, Object> registeredPayload = buildPayload('00000511', false, 'guest-with-parent@20three.digital', 'cust-511-registered');
+        Id registeredStagingId = CARAOrderSyncService.capturePayload('00000511', JSON.serialize(registeredPayload));
+        CARAOrderSyncService.SyncOutcome registeredOutcome = CARAOrderSyncService.syncFromStaging(registeredStagingId);
+        Assert.isTrue(registeredOutcome.success, registeredOutcome.message);
+        Id registeredAccountId = [SELECT AccountId FROM Order WHERE Id = :registeredOutcome.orderId].AccountId;
+
+        Map<String, Object> guestPayload = buildPayload('00000512', true, 'guest-with-parent@20three.digital', 'cust-512-guest-session');
+        Id guestStagingId = CARAOrderSyncService.capturePayload('00000512', JSON.serialize(guestPayload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome guestOutcome = CARAOrderSyncService.syncFromStaging(guestStagingId);
+        Test.stopTest();
+
+        Assert.isTrue(guestOutcome.success, guestOutcome.message);
+        Id guestAccountId = [SELECT AccountId FROM Order WHERE Id = :guestOutcome.orderId].AccountId;
+        Assert.areNotEqual(registeredAccountId, guestAccountId, 'The guest order must use a separate Guest Account, not the Registered Account.');
+
+        Account guestAccount = [SELECT Is_Guest__c, ParentId FROM Account WHERE Id = :guestAccountId];
+        Assert.isTrue(guestAccount.Is_Guest__c);
+        Assert.areEqual(registeredAccountId, guestAccount.ParentId, 'The Guest Account must be linked under the Registered Account.');
+
+        Account registeredAccount = [SELECT Is_Guest__c, External_ID__c FROM Account WHERE Id = :registeredAccountId];
+        Assert.isFalse(registeredAccount.Is_Guest__c);
+        Assert.areEqual('cust-511-registered', registeredAccount.External_ID__c, 'A guest order must never overwrite the Registered Account\'s External ID.');
+    }
+
+    @IsTest
+    static void secondGuestOrderFromSameEmailReusesSameGuestAccountNotANewOne() {
+        Map<String, Object> firstGuestPayload = buildPayload('00000513', true, 'repeat-guest@20three.digital', 'cust-513-session-a');
+        Id firstStagingId = CARAOrderSyncService.capturePayload('00000513', JSON.serialize(firstGuestPayload));
+        CARAOrderSyncService.SyncOutcome firstOutcome = CARAOrderSyncService.syncFromStaging(firstStagingId);
+        Assert.isTrue(firstOutcome.success, firstOutcome.message);
+        Id firstGuestAccountId = [SELECT AccountId FROM Order WHERE Id = :firstOutcome.orderId].AccountId;
+
+        // A second guest order from the same person carries a brand new,
+        // unrelated SFCC session customerId - this must not be treated as a
+        // different customer.
+        Map<String, Object> secondGuestPayload = buildPayload('00000514', true, 'repeat-guest@20three.digital', 'cust-514-session-b');
+        Id secondStagingId = CARAOrderSyncService.capturePayload('00000514', JSON.serialize(secondGuestPayload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome secondOutcome = CARAOrderSyncService.syncFromStaging(secondStagingId);
+        Test.stopTest();
+
+        Assert.isTrue(secondOutcome.success, secondOutcome.message);
+        Id secondGuestAccountId = [SELECT AccountId FROM Order WHERE Id = :secondOutcome.orderId].AccountId;
+        Assert.areEqual(firstGuestAccountId, secondGuestAccountId, 'Repeat guest orders for the same email must reuse the same Guest Account.');
+        Assert.areEqual(
+            1,
+            [SELECT COUNT() FROM Account WHERE Is_Guest__c = true AND Id IN (SELECT AccountId FROM Contact WHERE Email = 'repeat-guest@20three.digital')]
+        );
+    }
+
+    @IsTest
+    static void guestWithoutRegisteredParentCreatesOneAccountReusedByLaterGuestOrders() {
+        Map<String, Object> firstPayload = buildPayload('00000515', true, 'pure-guest@20three.digital', 'cust-515-session-a');
+        Id firstStagingId = CARAOrderSyncService.capturePayload('00000515', JSON.serialize(firstPayload));
+        CARAOrderSyncService.SyncOutcome firstOutcome = CARAOrderSyncService.syncFromStaging(firstStagingId);
+        Assert.isTrue(firstOutcome.success, firstOutcome.message);
+        Id firstGuestAccountId = [SELECT AccountId FROM Order WHERE Id = :firstOutcome.orderId].AccountId;
+        Account firstGuestAccount = [SELECT Is_Guest__c, ParentId FROM Account WHERE Id = :firstGuestAccountId];
+        Assert.isTrue(firstGuestAccount.Is_Guest__c);
+        Assert.isNull(firstGuestAccount.ParentId, 'No Registered parent exists yet, so the Guest Account must not be linked to one.');
+
+        Map<String, Object> secondPayload = buildPayload('00000516', true, 'pure-guest@20three.digital', 'cust-516-session-b');
+        Id secondStagingId = CARAOrderSyncService.capturePayload('00000516', JSON.serialize(secondPayload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome secondOutcome = CARAOrderSyncService.syncFromStaging(secondStagingId);
+        Test.stopTest();
+
+        Assert.isTrue(secondOutcome.success, secondOutcome.message);
+        Id secondGuestAccountId = [SELECT AccountId FROM Order WHERE Id = :secondOutcome.orderId].AccountId;
+        Assert.areEqual(firstGuestAccountId, secondGuestAccountId, 'The second guest order must reuse the same Guest Account.');
+        Assert.areEqual(2, [SELECT COUNT() FROM Order WHERE AccountId = :firstGuestAccountId]);
+    }
+
+    // =========================================================
+    // Root-cause regression: a guest order followed by a registered order
+    // for the same email must not corrupt the Registered Account's identity
+    // or spin off a spurious Duplicate_Of__c Account. This reproduces the
+    // exact sequence found in Cara Sandbox (a guest order overwriting a
+    // shared Account's External ID, which then looked like a customerId
+    // conflict to the next registered order).
+    // =========================================================
+    @IsTest
+    static void registeredOrderAfterPriorGuestOrderLinksRatherThanDuplicatesTheRegisteredAccount() {
+        Map<String, Object> guestPayload = buildPayload('00000517', true, 'guest-then-registered@20three.digital', 'cust-517-guest-session');
+        Id guestStagingId = CARAOrderSyncService.capturePayload('00000517', JSON.serialize(guestPayload));
+        CARAOrderSyncService.SyncOutcome guestOutcome = CARAOrderSyncService.syncFromStaging(guestStagingId);
+        Assert.isTrue(guestOutcome.success, guestOutcome.message);
+        Id guestAccountId = [SELECT AccountId FROM Order WHERE Id = :guestOutcome.orderId].AccountId;
+
+        Map<String, Object> registeredPayload = buildPayload('00000518', false, 'guest-then-registered@20three.digital', 'cust-517-registered');
+        Id registeredStagingId = CARAOrderSyncService.capturePayload('00000518', JSON.serialize(registeredPayload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome registeredOutcome = CARAOrderSyncService.syncFromStaging(registeredStagingId);
+        Test.stopTest();
+
+        Assert.isTrue(registeredOutcome.success, registeredOutcome.message);
+        Id registeredAccountId = [SELECT AccountId FROM Order WHERE Id = :registeredOutcome.orderId].AccountId;
+        Assert.areNotEqual(guestAccountId, registeredAccountId, 'The registered order must use its own Registered Account, not the Guest Account.');
+
+        Account registeredAccount = [SELECT Is_Guest__c, External_ID__c, Duplicate_Of__c FROM Account WHERE Id = :registeredAccountId];
+        Assert.isFalse(registeredAccount.Is_Guest__c);
+        Assert.areEqual('cust-517-registered', registeredAccount.External_ID__c);
+        Assert.isNull(registeredAccount.Duplicate_Of__c, 'A first-time registered order must not be flagged as a conflicting duplicate.');
+
+        Account guestAccount = [SELECT Is_Guest__c, External_ID__c, ParentId FROM Account WHERE Id = :guestAccountId];
+        Assert.isTrue(guestAccount.Is_Guest__c);
+        Assert.areEqual('cust-517-guest-session', guestAccount.External_ID__c, 'The Guest Account\'s own identity must be untouched by the later registered order.');
+        Assert.areEqual(registeredAccountId, guestAccount.ParentId, 'The pre-existing Guest Account must be linked under the newly identified Registered Account.');
+
+        // A second, later registered order for the same person (same stable
+        // customerId) must reuse the Registered Account, not spin off a new
+        // Duplicate_Of__c Account - the exact bug reproduced in Cara Sandbox.
+        Map<String, Object> secondRegisteredPayload = buildPayload('00000519', false, 'guest-then-registered@20three.digital', 'cust-517-registered');
+        Id secondStagingId = CARAOrderSyncService.capturePayload('00000519', JSON.serialize(secondRegisteredPayload));
+        CARAOrderSyncService.SyncOutcome secondRegisteredOutcome = CARAOrderSyncService.syncFromStaging(secondStagingId);
+        Assert.isTrue(secondRegisteredOutcome.success, secondRegisteredOutcome.message);
+        Id secondRegisteredAccountId = [SELECT AccountId FROM Order WHERE Id = :secondRegisteredOutcome.orderId].AccountId;
+        Assert.areEqual(registeredAccountId, secondRegisteredAccountId, 'A repeat registered order for the same customerId must reuse the Registered Account, not create a duplicate.');
+        Assert.areEqual(
+            1,
+            [SELECT COUNT() FROM Account WHERE Is_Guest__c = false AND Id IN (SELECT AccountId FROM Contact WHERE Email = 'guest-then-registered@20three.digital')],
+            'Exactly one Registered Account must exist for this person after the full guest -> registered -> registered lifecycle.'
+        );
+    }
+
     private static Map<String, Object> buildPayload(String orderNo, Boolean guest, String email, String customerId) {
         Map<String, Object> billingAddress = new Map<String, Object>{
             'address1' => '1 Test Street',

@@ -5,10 +5,14 @@ public with sharing class CARAAppointmentNotificationService {
 
     /*
      * Sends the guest confirmation email with an attached .ics calendar
-     * invite for the in-store visit. This is a best-effort side effect —
-     * the appointment has already been committed by the time this runs,
-     * so a failure here (bad email, deliverability, etc.) must never
-     * surface as a booking failure to the caller.
+     * invite for the in-store visit, as a single native email (not routed
+     * through Marketing Cloud — that path's actions360 send API has no
+     * attachment support, so it can't carry the .ics on the same send;
+     * see CARAAppointmentNotificationQueueable for that now-unused route).
+     * This is a best-effort side effect — the appointment has already been
+     * committed by the time this runs, so a failure here (bad email,
+     * deliverability, etc.) must never surface as a booking failure to the
+     * caller.
      *
      * The outcome is always written back to Confirmation_Email_Status__c /
      * Confirmation_Email_Error__c so a send failure is visible on the
@@ -135,29 +139,32 @@ public with sharing class CARAAppointmentNotificationService {
         String manageAppointmentUrl = 'mailto:info@cara.ae?subject=' +
             EncodingUtil.urlEncode('Manage Appointment - ' + bookingRecord.Name, 'UTF-8');
 
-        String dividerRow = '<tr><td style="padding: 0 30px;">' +
-            '<table width="100%" cellpadding="0" cellspacing="0"><tr>' +
-            '<td height="1" style="height: 1px; line-height: 1px; font-size: 0; background-color: #000000;">&nbsp;</td>' +
-            '</tr></table></td></tr>';
+        // formatDisplayDateTime() returns "<date> at <time>, Dubai time" as a
+        // single string. The design shows Date and Time as separate rows, so
+        // that one call is split on its own " at " separator rather than
+        // duplicating the date-formatting logic here.
+        String fullDisplayDateTime = formatDisplayDateTime(bookingRecord.Appointment_Start__c);
+        List<String> displayDateTimeParts = fullDisplayDateTime.split(' at ', 2);
+        String displayDate = displayDateTimeParts[0];
+        String displayTime = displayDateTimeParts.size() > 1 ? displayDateTimeParts[1] : fullDisplayDateTime;
 
-        return '<table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff;"><tr><td align="center">' +
-            '<table width="600" cellpadding="0" cellspacing="0" style="width: 600px; max-width: 600px; background-color: #ffffff; font-family: \'Helvetica Neue\', Helvetica, Arial, sans-serif;">' +
+        String dividerRow = CARAEmailBrandingUtil.divider();
 
-            // Header wordmark
-            '<tr><td align="center" style="padding: 40px 20px 30px 20px;">' +
-            '<span style="font-family: Georgia, \'Times New Roman\', serif; font-size: 26px; font-weight: 700; letter-spacing: 4px; color: #383737; text-transform: uppercase;">Cara</span>' +
-            '</td></tr>' +
-
-            // Hero image
-            '<tr><td align="center">' +
-            '<img src="https://carajewellers--caradev.sandbox.file.force.com/servlet/servlet.ImageServer?id=015FV005jSYsu9QYQR&amp;oid=00DFV0029Wxhzfo2QA" ' +
-            'alt="A Cara jewellery specialist assisting a customer in store" width="600" ' +
-            'style="display: block; width: 100%; max-width: 600px; height: auto; border: 0;" />' +
-            '</td></tr>' +
+        // Playfair Display approximates the Figma display-serif headline.
+        // Gmail and Outlook strip <style> blocks entirely, so this @import
+        // is a progressive enhancement only — those clients (and any other
+        // that ignores it) silently fall back to the Georgia serif below.
+        // Header, footer and nav links come from CARAEmailBrandingUtil, the
+        // shared source of truth also used by the payment-link and custom
+        // product request confirmation emails.
+        // Hero image now comes from CARAEmailBrandingUtil.wrapEmail() (via
+        // heroImage()), shared with every other template, rather than this
+        // org-specific hardcoded URL.
+        String bodyRows =
 
             // Headline
             '<tr><td align="center" style="padding: 0 30px 20px 30px;">' +
-            '<p style="margin: 0; font-family: Georgia, \'Times New Roman\', serif; font-weight: 400; font-size: 32px; line-height: 40px; text-align: center; text-transform: uppercase; color: #000000;">Your Cara appointment is confirmed</p>' +
+            '<p style="margin: 0; font-family: \'Playfair Display\', Georgia, \'Times New Roman\', serif; font-weight: 700; font-size: 32px; line-height: 40px; text-align: center; text-transform: uppercase; color: #000000;">Your Cara appointment is confirmed</p>' +
             '</td></tr>' +
 
             // Greeting + intro
@@ -178,8 +185,10 @@ public with sharing class CARAAppointmentNotificationService {
             '<table width="100%" cellpadding="0" cellspacing="0">' +
             '<tr><td width="110" valign="top" style="padding: 6px 0; font-size: 14px; color: #000000; white-space: nowrap;">Boutique:</td>' +
             '<td align="right" valign="top" style="padding: 6px 0; font-size: 15px; color: #000000;">' + storeRecord.Name + '<br/>' + storeRecord.Address__c + '</td></tr>' +
-            '<tr><td width="110" valign="top" style="padding: 6px 0; font-size: 14px; color: #000000; white-space: nowrap;">Date &amp; Time:</td>' +
-            '<td align="right" valign="top" style="padding: 6px 0; font-size: 15px; color: #000000;">' + formatDisplayDateTime(bookingRecord.Appointment_Start__c) + '</td></tr>' +
+            '<tr><td width="110" valign="top" style="padding: 6px 0; font-size: 14px; color: #000000; white-space: nowrap;">Date:</td>' +
+            '<td align="right" valign="top" style="padding: 6px 0; font-size: 15px; color: #000000;">' + displayDate + '</td></tr>' +
+            '<tr><td width="110" valign="top" style="padding: 6px 0; font-size: 14px; color: #000000; white-space: nowrap;">Time:</td>' +
+            '<td align="right" valign="top" style="padding: 6px 0; font-size: 15px; color: #000000;">' + displayTime + '</td></tr>' +
             '<tr><td width="110" valign="top" style="padding: 6px 0; font-size: 14px; color: #000000; white-space: nowrap;">Interested in:</td>' +
             '<td align="right" valign="top" style="padding: 6px 0; font-size: 15px; color: #000000;">' + bookingRecord.interested_in__c + '</td></tr>' +
             '</table>' +
@@ -207,69 +216,15 @@ public with sharing class CARAAppointmentNotificationService {
 
             dividerRow +
 
-            // Support note
-            '<tr><td align="center" style="padding: 25px 30px 10px 30px;">' +
-            '<p style="margin: 0; font-size: 15px; font-weight: 700; color: #000000;">Questions about your appointment? Reach your Cara specialist.</p>' +
+            // Support note (business-specific; kept out of the shared footer)
+            '<tr><td align="left" style="padding: 25px 30px 10px 30px;">' +
+            '<p style="margin: 0 0 4px 0; font-size: 15px; font-weight: 700; color: #000000;">Questions about your appointment?</p>' +
+            '<p style="margin: 0;"><a href="mailto:info@cara.ae" style="font-size: 15px; color: #2a8ca4; text-decoration: underline;">Reach your Cara specialist.</a></p>' +
             '</td></tr>' +
 
-            dividerRow +
+            dividerRow;
 
-            // Support disclaimer
-            '<tr><td align="center" style="padding: 20px 30px 30px 30px;">' +
-            '<p style="margin: 0; font-size: 13px; line-height: 19px; color: #000000;">Please do not reply to this message. If you have any questions, please contact us via email at ' +
-            '<a href="mailto:info@cara.ae" style="color: #000000; text-decoration: underline;">info@cara.ae</a>' +
-            ' or call us at +971 4 347 8089</p>' +
-            '</td></tr>' +
-
-            // Footer band — wordmark/tagline + contact details
-            '<tr><td style="background-color: #2a8ca4; padding: 35px 30px 20px 30px;">' +
-            '<table width="100%" cellpadding="0" cellspacing="0"><tr>' +
-            '<td valign="top" style="font-family: Georgia, \'Times New Roman\', serif; font-size: 20px; font-weight: 700; letter-spacing: 3px; color: #ffffff; text-transform: uppercase;">Cara' +
-            '<div style="margin-top: 4px; font-family: \'Helvetica Neue\', Helvetica, Arial, sans-serif; font-size: 12px; font-weight: 400; letter-spacing: 0.5px; color: #e0f0f3; text-transform: none;">Your Everyday Rituals</div>' +
-            '</td>' +
-            '<td valign="top" align="right" style="font-family: \'Helvetica Neue\', Helvetica, Arial, sans-serif; font-size: 13px; line-height: 19px; color: #ffffff;">' +
-            '123 Main Street, Downtown, Dubai, UAE<br/>' +
-            '<a href="tel:+97143478089" style="color: #ffffff; text-decoration: none;">+971 4 347 8089</a><br/>' +
-            '<a href="mailto:info@cara.ae" style="color: #ffffff; text-decoration: none;">info@cara.ae</a>' +
-            '</td>' +
-            '</tr></table>' +
-            '</td></tr>' +
-
-            // Footer band — "we're here to help" row
-            '<tr><td style="background-color: #2a8ca4; padding: 0 30px 20px 30px;">' +
-            '<table width="100%" cellpadding="0" cellspacing="0"><tr>' +
-            '<td valign="top" style="font-family: \'Helvetica Neue\', Helvetica, Arial, sans-serif; font-size: 13px; color: #ffffff;">Our team is here, Always to help</td>' +
-            '<td valign="top" align="right" style="font-family: \'Helvetica Neue\', Helvetica, Arial, sans-serif; font-size: 13px;">' +
-            '<a href="mailto:info@cara.ae" style="color: #ffffff; text-decoration: underline;">Contact Us</a>' +
-            '</td>' +
-            '</tr></table>' +
-            '</td></tr>' +
-
-            // Footer band — nav links
-            '<tr><td style="background-color: #2a8ca4; padding: 0 30px 20px 30px;">' +
-            '<p style="margin: 0; font-family: \'Helvetica Neue\', Helvetica, Arial, sans-serif; font-size: 13px; line-height: 20px; color: #ffffff;">' +
-            'Book an appointment &nbsp;|&nbsp; Store locations &nbsp;|&nbsp; Instagram &nbsp;|&nbsp; LinkedIn &nbsp;|&nbsp; ' +
-            '<a href="https://cara.ae" style="color: #ffffff; text-decoration: underline;">cara.ae</a>' +
-            '</p>' +
-            '</td></tr>' +
-
-            // Footer band — divider
-            '<tr><td style="background-color: #2a8ca4; padding: 0 30px;">' +
-            '<table width="100%" cellpadding="0" cellspacing="0"><tr>' +
-            '<td height="1" style="height: 1px; line-height: 1px; font-size: 0; background-color: #6fb3c4;">&nbsp;</td>' +
-            '</tr></table>' +
-            '</td></tr>' +
-
-            // Footer band — legal / unsubscribe
-            '<tr><td align="center" style="background-color: #2a8ca4; padding: 15px 30px 30px 30px;">' +
-            '<p style="margin: 0; font-family: \'Helvetica Neue\', Helvetica, Arial, sans-serif; font-size: 11px; line-height: 16px; color: #d9edf1;">' +
-            'You\'re receiving this email because you have an account or interacted with CARA<br/>' +
-            'Unsubscribe &nbsp;|&nbsp; &copy; 2026 CARA Jewellers' +
-            '</p>' +
-            '</td></tr>' +
-
-            '</table>' +
-            '</td></tr></table>';
+        return CARAEmailBrandingUtil.wrapEmail(bodyRows);
     }
 
 

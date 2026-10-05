@@ -78,6 +78,37 @@ private class CARASplitPaymentNotificationServiceTest {
 
 
     @IsTest
+    static void storefrontUrlDoesNotDuplicateLocaleReturnedBySfcc() {
+        String origin = new Url(CARASplitPaymentSettings.getStorefrontBaseUri()).getProtocol() + '://'
+            + new Url(CARASplitPaymentSettings.getStorefrontBaseUri()).getAuthority();
+
+        System.assertEquals(
+            origin + '/en-AE/pay/deposit?basketId=BASKET-1',
+            CARASplitPaymentNotificationService.buildStorefrontUrl('/en-AE/pay/deposit?basketId=BASKET-1')
+        );
+        System.assertEquals(
+            origin + '/en-AE/pay/balance?orderNo=ORD-1',
+            CARASplitPaymentNotificationService.buildStorefrontUrl('en-AE/pay/balance?orderNo=ORD-1')
+        );
+    }
+
+
+    @IsTest
+    static void storefrontUrlKeepsBaseLocaleForPathWithoutLocale() {
+        String baseUri = CARASplitPaymentSettings.getStorefrontBaseUri().removeEnd('/');
+
+        System.assertEquals(
+            baseUri + '/pay/deposit?basketId=BASKET-1',
+            CARASplitPaymentNotificationService.buildStorefrontUrl('/pay/deposit?basketId=BASKET-1')
+        );
+        System.assertEquals(
+            'https://example.com/pay?x=1',
+            CARASplitPaymentNotificationService.buildStorefrontUrl('https://example.com/pay?x=1')
+        );
+    }
+
+
+    @IsTest
     static void sendBalanceLinkSkipsWhenEmailIsBlank() {
         Test.startTest();
         CARASplitPaymentNotificationService.NotificationOutcome outcome =

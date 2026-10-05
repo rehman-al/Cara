@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Follow_Up_Reminder_Sent__c</fullName>
+    <defaultValue>false</defaultValue>
+    <description>Set to true by the Case_Follow_Up_Reminder_Daily flow once a reminder Task has been created for the current Next_Action_Date__c. Reset to false by Case_Follow_Up_Reminder_Reset whenever Next_Action_Date__c changes, so a new reminder is created for the new date.</description>
+    <label>Follow-Up Reminder Sent</label>
+    <trackFeedHistory>false</trackFeedHistory>
+    <trackHistory>false</trackHistory>
+    <trackTrending>false</trackTrending>
+    <type>Checkbox</type>
+</CustomField>

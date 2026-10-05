@@ -1,15 +1,15 @@
-@RestResource(urlMapping='/cara/chat/messages')
+@RestResource(urlMapping='/cara/chat/history')
 global with sharing class CARAChatHistoryRestService {
 
     @HttpGet
     global static void getChatHistory() {
         try {
-            String caseId = RestContext.request == null
+            String caseNumber = RestContext.request == null
                 ? null
-                : RestContext.request.params.get('caseId');
+                : RestContext.request.params.get('caseNumber');
 
             Case caseRecord =
-                CARAChatApiSupport.requireCaseById(caseId);
+                CARAChatApiSupport.requireCaseByNumber(caseNumber);
 
 
             // Current database state.
@@ -45,6 +45,7 @@ global with sharing class CARAChatHistoryRestService {
                 messageRecords = [
                     SELECT
                         Id,
+                        Name,
                         Case__c,
                         Message_Body__c,
                         Direction__c,
@@ -69,24 +70,28 @@ global with sharing class CARAChatHistoryRestService {
                 new ChatHistoryResponse();
 
             responseBody.success = true;
-            responseBody.message =
-                'Chat messages retrieved successfully.';
-            responseBody.caseId =
-                caseRecord.Id;
-            responseBody.count =
+            responseBody.caseNumber =
+                caseRecord.CaseNumber;
+            responseBody.totalMessages =
                 messageRecords.size();
             responseBody.messages =
-                new List<CARAChatApiSupport.MessageResponse>();
+                new List<ChatMessageResponse>();
+
+
+            Integer sequenceNumber = 1;
 
             for (
                 Chat_Message__c messageRecord :
                 messageRecords
             ) {
                 responseBody.messages.add(
-                    new CARAChatApiSupport.MessageResponse(
-                        messageRecord
+                    new ChatMessageResponse(
+                        messageRecord,
+                        sequenceNumber
                     )
                 );
+
+                sequenceNumber++;
             }
 
 
@@ -131,9 +136,35 @@ global with sharing class CARAChatHistoryRestService {
 
     private class ChatHistoryResponse {
         public Boolean success;
+        public String caseNumber;
+        public Integer totalMessages;
+        public List<ChatMessageResponse> messages;
+    }
+
+
+    private class ChatMessageResponse {
+        public Integer sequence;
+        public String messageId;
+        public String senderType;
+        public String direction;
         public String message;
-        public Id caseId;
-        public Integer count;
-        public List<CARAChatApiSupport.MessageResponse> messages;
+        public Datetime timestamp;
+
+
+        public ChatMessageResponse(
+            Chat_Message__c messageRecord,
+            Integer sequenceNumber
+        ) {
+            sequence = sequenceNumber;
+            messageId = messageRecord.Name;
+            senderType =
+                messageRecord.Sender_Type__c;
+            direction =
+                messageRecord.Direction__c;
+            message =
+                messageRecord.Message_Body__c;
+            timestamp =
+                messageRecord.CreatedDate;
+        }
     }
 }

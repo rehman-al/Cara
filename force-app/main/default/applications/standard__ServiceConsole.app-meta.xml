@@ -183,6 +183,7 @@
     <tabs>standard-Opportunity</tabs>
     <tabs>standard-Lead</tabs>
     <tabs>standard-Knowledge</tabs>
+    <tabs>standard-Dashboard</tabs>
     <tabs>MobileLanding</tabs>
     <tabs>Store_Appointment_Booking__c</tabs>
     <tabs>Store__c</tabs>
@@ -217,6 +218,9 @@
         <mappings>
             <fieldName>AccountId</fieldName>
             <tab>standard-Contact</tab>
+        </mappings>
+        <mappings>
+            <tab>standard-Dashboard</tab>
         </mappings>
         <mappings>
             <tab>standard-Knowledge</tab>

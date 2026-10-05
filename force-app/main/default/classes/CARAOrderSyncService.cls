@@ -132,12 +132,7 @@ public with sharing class CARAOrderSyncService {
 
             CatalogContext catalog = resolveCatalog(payload.productItems);
             CustomerContext customer = syncCustomer(payload);
-            Order orderRecord = syncOrderRecord(
-                payload,
-                customer.accountRecord.Id,
-                customer.contactRecord.Id,
-                catalog.pricebookId
-            );
+            Order orderRecord = syncOrderRecord(payload, customer.accountRecord.Id, catalog.pricebookId);
 
             ensurePricebookEntries(catalog, payload.productItems);
             syncOrderItems(orderRecord.Id, payload.productItems, catalog);
@@ -350,57 +345,101 @@ public with sharing class CARAOrderSyncService {
     }
 
     /**
-     * Resolves the Account/Contact for the order. Guest and logged-in
-     * orders go through the exact same path: resolution is keyed on
-     * customerInfo.email (required for every order), and a guest order with
-     * no matching Contact simply creates a fresh Account+Contact flagged
-     * Is_Guest__c — there is no dependency on a pre-existing Account,
-     * Contact or User for a guest checkout.
+     * Resolves the Account/Contact for the order. Registered and guest
+     * identities are modeled as two separate Accounts (Is_Guest__c = false
+     * vs. true) that are never merged into one another: a registered order
+     * always resolves/creates the customer's Registered Account, and a
+     * guest order always resolves/creates a dedicated Guest Account, keyed
+     * on customerInfo.email (required for every order) rather than the
+     * guest's per-session customerId, which SFCC does not keep stable
+     * across guest checkouts. When both a Registered and a Guest Account
+     * exist for the same email, the Guest Account's standard ParentId
+     * points at the Registered Account — the Registered Account itself is
+     * never written to by a guest order.
      */
     private static CustomerContext syncCustomer(CARAOrderPayload payload) {
         String emailAddress = payload.customerInfo.email.trim().toLowerCase();
+
         List<Contact> matchingContacts = [
-            SELECT Id, AccountId, Email
+            SELECT Id, AccountId, Email, Account.Is_Guest__c, Account.External_ID__c, Account.ParentId
             FROM Contact
             WHERE Email = :emailAddress
             ORDER BY CreatedDate ASC
-            LIMIT 2
         ];
-        if (matchingContacts.size() > 1) {
-            throw new IntegrationException('Multiple contacts use customer email ' + emailAddress + '.');
+
+        Contact registeredContact;
+        Contact guestContact;
+        for (Contact existingContact : matchingContacts) {
+            if (existingContact.AccountId == null) {
+                continue;
+            }
+            if (existingContact.Account.Is_Guest__c == true) {
+                if (guestContact != null) {
+                    throw new IntegrationException('Multiple guest accounts use customer email ' + emailAddress + '.');
+                }
+                guestContact = existingContact;
+            } else {
+                if (registeredContact != null) {
+                    throw new IntegrationException('Multiple registered accounts use customer email ' + emailAddress + '.');
+                }
+                registeredContact = existingContact;
+            }
         }
 
-        Contact contactRecord = matchingContacts.isEmpty() ? null : matchingContacts[0];
-        Account accountRecord;
+        return payload.guest == true
+            ? syncGuestCustomer(payload, registeredContact, guestContact)
+            : syncRegisteredCustomer(payload, emailAddress, registeredContact, guestContact);
+    }
 
-        if (contactRecord != null && contactRecord.AccountId != null) {
-            Id contactAccountId = contactRecord.AccountId;
+    /**
+     * Registered-order path: matches/creates the Registered Account only
+     * (Is_Guest__c = false), using the same customerId-conflict ->
+     * Duplicate_Of__c handling as before. If a Guest Account already exists
+     * for this email, it is linked under the resolved Registered Account via
+     * ParentId (the Guest → Registered transition) but is otherwise left
+     * untouched — unless a customerId conflict was detected, in which case
+     * linking which identity is real is left to Ops rather than guessed.
+     */
+    private static CustomerContext syncRegisteredCustomer(
+        CARAOrderPayload payload,
+        String emailAddress,
+        Contact registeredContact,
+        Contact guestContact
+    ) {
+        Account accountRecord;
+        Id duplicateOfAccountId;
+
+        if (registeredContact != null) {
+            Id registeredAccountId = registeredContact.AccountId;
             accountRecord = [
                 SELECT Id, External_ID__c
                 FROM Account
-                WHERE Id = :contactAccountId
+                WHERE Id = :registeredAccountId
                 LIMIT 1
             ];
             if (
-                payload.guest != true &&
                 !String.isBlank(payload.customerInfo.customerId) &&
                 !String.isBlank(accountRecord.External_ID__c) &&
                 accountRecord.External_ID__c != payload.customerInfo.customerId
             ) {
-                throw new IntegrationException('Customer email and customerId resolve to different accounts.');
+                // The email matches an existing Registered Account, but that
+                // Account is already tied to a different SFCC customerId —
+                // e.g. two people sharing an inbox, or a customer
+                // re-registered under a new SFCC identity. Rather than
+                // guessing which identity is real (or silently overwriting
+                // it), create a separate Account+Contact for this order and
+                // link it back via Duplicate_Of__c so Ops can reconcile.
+                duplicateOfAccountId = accountRecord.Id;
+                accountRecord = null;
+                registeredContact = null;
             }
-            // Guest checkouts get a fresh, synthetic customerId from SFCC on every
-            // session even when the same person (same email) checks out again, so
-            // a customerId mismatch is expected and not a real identity conflict.
-            // applyAccountValues() below will refresh External_ID__c to the latest
-            // guest id for this account; only registered (non-guest) customers are
-            // held to a stable customerId.
         } else if (!String.isBlank(payload.customerInfo.customerId)) {
             String customerId = payload.customerInfo.customerId;
             List<Account> matchingAccounts = [
                 SELECT Id, External_ID__c
                 FROM Account
                 WHERE External_ID__c = :customerId
+                AND Is_Guest__c = false
                 ORDER BY CreatedDate ASC
                 LIMIT 2
             ];
@@ -409,38 +448,41 @@ public with sharing class CARAOrderSyncService {
             }
             accountRecord = matchingAccounts.isEmpty() ? null : matchingAccounts[0];
         }
-        // No Contact match and no (or blank) customerId — e.g. a first-time
-        // guest checkout — falls through with accountRecord still null, and
-        // a brand new Account+Contact is created for this order below.
+        // No Contact match and no (or blank) customerId falls through with
+        // accountRecord still null, and a brand new Registered Account+
+        // Contact is created below.
 
         Boolean isNewAccount = accountRecord == null;
         if (isNewAccount) {
             accountRecord = new Account();
+            if (duplicateOfAccountId != null) {
+                accountRecord.Duplicate_Of__c = duplicateOfAccountId;
+            }
         }
-        applyAccountValues(accountRecord, payload, isNewAccount);
+        applyAccountValues(accountRecord, payload, isNewAccount, false);
         if (isNewAccount) {
-            insert accountRecord;
+            // A duplicate-identity Account shares its email with an existing
+            // Contact, which the standard duplicate rules would otherwise
+            // block; this is an intentional, tracked duplicate (see
+            // Duplicate_Of__c above), so allow the save through.
+            insertAllowingDuplicates(accountRecord);
         } else {
             update accountRecord;
         }
 
-        Boolean isNewContact = contactRecord == null;
-        if (isNewContact) {
-            contactRecord = new Contact();
-        } else {
-            // AccountId is only writable on insert; for a Contact that is the
-            // Person Account's own 1:1 contact, it is auto-managed and becomes
-            // read-only after creation, so re-querying it with AccountId still
-            // populated (even unchanged) and sending it back on update throws
-            // INVALID_FIELD_FOR_INSERT_UPDATE. Rebuild a bare sObject so only
-            // the fields applyContactValues() actually sets go out on update.
-            contactRecord = new Contact(Id = contactRecord.Id);
-        }
-        applyContactValues(contactRecord, accountRecord.Id, payload, isNewContact);
-        if (isNewContact) {
-            insert contactRecord;
-        } else {
-            update contactRecord;
+        Contact contactRecord = upsertContact(registeredContact, accountRecord.Id, payload, false);
+
+        // A Guest Account already existed for this email before the
+        // customer registered — link it under the Registered Account so the
+        // hierarchy is discoverable. Skipped when a customerId conflict was
+        // just detected above, since which registered identity is real is
+        // then an Ops decision, not one this sync should make for them.
+        if (
+            guestContact != null &&
+            duplicateOfAccountId == null &&
+            guestContact.Account.ParentId != accountRecord.Id
+        ) {
+            update new Account(Id = guestContact.AccountId, ParentId = accountRecord.Id);
         }
 
         CustomerContext context = new CustomerContext();
@@ -449,7 +491,85 @@ public with sharing class CARAOrderSyncService {
         return context;
     }
 
-    private static void applyAccountValues(Account accountRecord, CARAOrderPayload payload, Boolean isNewAccount) {
+    /**
+     * Guest-order path: matches/creates the Guest Account only (Is_Guest__c
+     * = true), keyed on email so repeated guest orders from the same person
+     * always reuse the same Guest Account regardless of SFCC's per-session
+     * guest customerId. Never creates or modifies a Registered Account.
+     */
+    private static CustomerContext syncGuestCustomer(
+        CARAOrderPayload payload,
+        Contact registeredContact,
+        Contact guestContact
+    ) {
+        Account accountRecord;
+        Boolean isNewAccount = guestContact == null;
+        if (isNewAccount) {
+            accountRecord = new Account();
+            if (registeredContact != null) {
+                // A Registered parent already exists for this email — the
+                // new Guest Account is subordinate to it via the standard
+                // Account hierarchy and never replaces or modifies it.
+                accountRecord.ParentId = registeredContact.AccountId;
+            }
+        } else {
+            accountRecord = new Account(Id = guestContact.AccountId);
+        }
+        applyAccountValues(accountRecord, payload, isNewAccount, true);
+        if (isNewAccount) {
+            insertAllowingDuplicates(accountRecord);
+        } else {
+            update accountRecord;
+        }
+
+        Contact contactRecord = upsertContact(guestContact, accountRecord.Id, payload, true);
+
+        CustomerContext context = new CustomerContext();
+        context.accountRecord = accountRecord;
+        context.contactRecord = contactRecord;
+        return context;
+    }
+
+    private static Contact upsertContact(
+        Contact existingContact,
+        Id accountId,
+        CARAOrderPayload payload,
+        Boolean isGuestAccount
+    ) {
+        Boolean isNewContact = existingContact == null;
+        Contact contactRecord;
+        if (isNewContact) {
+            contactRecord = new Contact();
+        } else {
+            // AccountId is only writable on insert; for a Contact that is the
+            // Person Account's own 1:1 contact, it is auto-managed and becomes
+            // read-only after creation, so re-querying it with AccountId still
+            // populated (even unchanged) and sending it back on update throws
+            // INVALID_FIELD_FOR_INSERT_UPDATE. Use a bare sObject so only the
+            // fields applyContactValues() actually sets go out on update.
+            contactRecord = new Contact(Id = existingContact.Id);
+        }
+        applyContactValues(contactRecord, accountId, payload, isNewContact, isGuestAccount);
+        if (isNewContact) {
+            insertAllowingDuplicates(contactRecord);
+        } else {
+            update contactRecord;
+        }
+        return contactRecord;
+    }
+
+    private static void insertAllowingDuplicates(SObject record) {
+        Database.DMLOptions dmlOptions = new Database.DMLOptions();
+        dmlOptions.DuplicateRuleHeader.allowSave = true;
+        Database.insert(record, dmlOptions);
+    }
+
+    private static void applyAccountValues(
+        Account accountRecord,
+        CARAOrderPayload payload,
+        Boolean isNewAccount,
+        Boolean isGuestAccount
+    ) {
         if (isNewAccount) {
             // Name is only writable on insert; on Person Accounts it becomes a
             // read-only compound field (derived from FirstName/LastName) after
@@ -461,9 +581,13 @@ public with sharing class CARAOrderSyncService {
                 payload.customerInfo.email
             );
             accountRecord.Name = customerName;
+            // Is_Guest__c is the Account's classification and is set once,
+            // at creation, and never flipped on an existing Account —
+            // Registered and Guest Accounts for the same person are always
+            // two separate records (see syncCustomer()).
+            accountRecord.Is_Guest__c = isGuestAccount;
         }
         accountRecord.External_ID__c = payload.customerInfo.customerId;
-        accountRecord.Is_Guest__c = payload.guest == true;
 
         if (payload.billingAddress != null) {
             accountRecord.BillingStreet = payload.billingAddress.address1;
@@ -479,7 +603,8 @@ public with sharing class CARAOrderSyncService {
         Contact contactRecord,
         Id accountId,
         CARAOrderPayload payload,
-        Boolean isNewContact
+        Boolean isNewContact,
+        Boolean isGuestAccount
     ) {
         String customerName = firstNonBlank(payload.customerInfo.customerName, payload.customerName, 'Customer');
         List<String> nameParts = splitName(customerName);
@@ -490,7 +615,7 @@ public with sharing class CARAOrderSyncService {
         contactRecord.FirstName = nameParts[0];
         contactRecord.LastName = nameParts[1];
         contactRecord.Email = payload.customerInfo.email.trim().toLowerCase();
-        contactRecord.Is_Guest__c = payload.guest == true;
+        contactRecord.Is_Guest__c = isGuestAccount;
 
         if (payload.billingAddress != null) {
             contactRecord.MailingStreet = payload.billingAddress.address1;
@@ -503,7 +628,7 @@ public with sharing class CARAOrderSyncService {
         }
     }
 
-    private static Order syncOrderRecord(CARAOrderPayload payload, Id accountId, Id contactId, Id pricebookId) {
+    private static Order syncOrderRecord(CARAOrderPayload payload, Id accountId, Id pricebookId) {
         List<Order> matchingOrders = [
             SELECT Id, Status, Pricebook2Id
             FROM Order
@@ -524,10 +649,6 @@ public with sharing class CARAOrderSyncService {
         }
 
         orderRecord.AccountId = accountId;
-        // For a Person Account this is its auto-created PersonContact. Drives
-        // Customer_Email__c (formula on Contact__r.Email), which the balance
-        // link and order email flows depend on.
-        orderRecord.Contact__c = contactId;
         orderRecord.OrderReferenceNumber = payload.orderNo;
         orderRecord.EffectiveDate = resolveCreationDatetime(payload.creationDate).dateGmt();
         orderRecord.Status = targetStatus;

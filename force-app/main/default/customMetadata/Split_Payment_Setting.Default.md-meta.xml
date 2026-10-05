@@ -14,4 +14,8 @@
         <field>Retryable_Status_Codes__c</field>
         <value xsi:type="xsd:string">502</value>
     </values>
+    <values>
+        <field>Storefront_Base_URI__c</field>
+        <value xsi:type="xsd:string">https://sfccdev.carajewellers.com/en-ae</value>
+    </values>
 </CustomMetadata>

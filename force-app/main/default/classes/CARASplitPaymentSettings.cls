@@ -17,6 +17,7 @@ public with sharing class CARASplitPaymentSettings {
     private static final Decimal FALLBACK_DEPOSIT_PERCENTAGE = 0.25;
     private static final Integer FALLBACK_MAX_RETRY_ATTEMPTS = 2;
     private static final Set<Integer> FALLBACK_RETRYABLE_STATUS_CODES = new Set<Integer>{ 502 };
+    private static final String FALLBACK_STOREFRONT_BASE_URI = 'https://sfccdev.carajewellers.com/en-ae';
 
     private static Split_Payment_Setting__mdt cachedSetting;
     private static Boolean loaded = false;
@@ -56,11 +57,19 @@ public with sharing class CARASplitPaymentSettings {
     }
 
 
+    public static String getStorefrontBaseUri() {
+        Split_Payment_Setting__mdt setting = getSetting();
+        return setting != null && String.isNotBlank(setting.Storefront_Base_URI__c)
+            ? setting.Storefront_Base_URI__c
+            : FALLBACK_STOREFRONT_BASE_URI;
+    }
+
+
     private static Split_Payment_Setting__mdt getSetting() {
         if (!loaded) {
             loaded = true;
             List<Split_Payment_Setting__mdt> records = [
-                SELECT Deposit_Percentage__c, Max_Retry_Attempts__c, Retryable_Status_Codes__c
+                SELECT Deposit_Percentage__c, Max_Retry_Attempts__c, Retryable_Status_Codes__c, Storefront_Base_URI__c
                 FROM Split_Payment_Setting__mdt
                 WHERE DeveloperName = :DEFAULT_RECORD_NAME
                 LIMIT 1

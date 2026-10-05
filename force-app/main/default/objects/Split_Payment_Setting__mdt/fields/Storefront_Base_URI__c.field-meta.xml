@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Storefront_Base_URI__c</fullName>
+    <description>Base URL of the SFCC storefront (including locale path, e.g. /en-ae) used to build the deposit/balance payment links sent in customer emails. If SFCC/MRT returns a relative path in its &quot;link&quot; response field, this is prepended to form the full URL; an absolute link from SFCC is used as-is. Read by CARASplitPaymentSettings via CARASplitPaymentNotificationService.</description>
+    <externalId>false</externalId>
+    <fieldManageability>DeveloperControlled</fieldManageability>
+    <label>Storefront Base URI</label>
+    <length>255</length>
+    <required>true</required>
+    <type>Text</type>
+    <unique>false</unique>
+</CustomField>

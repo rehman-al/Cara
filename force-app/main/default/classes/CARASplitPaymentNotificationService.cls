@@ -43,7 +43,7 @@ public with sharing class CARASplitPaymentNotificationService {
             customerContact != null ? customerContact.Id : null,
             customerContact != null ? customerContact.Email : null,
             'Complete Your Deposit - ' + requestName,
-            buildDepositEmailBody(firstName, requestName, depositAmount, depositLink)
+            buildDepositEmailBody(firstName, requestName, depositAmount, buildStorefrontUrl(depositLink))
         );
     }
 
@@ -66,8 +66,43 @@ public with sharing class CARASplitPaymentNotificationService {
             null,
             customerEmail,
             'Your Piece is Ready - Balance Payment Due for Order ' + orderNumber,
-            buildBalanceEmailBody(firstName, orderNumber, remainingAmount, balanceLink)
+            buildBalanceEmailBody(firstName, orderNumber, remainingAmount, buildStorefrontUrl(balanceLink))
         );
+    }
+
+
+    /*
+     * SFCC/MRT's deposit-basket and balance-link responses are not
+     * guaranteed to return an absolute URL — a relative path has no
+     * storefront domain to resolve against once it is dropped into an
+     * email. Prepends the admin-configured storefront base (Split_Payment_
+     * Setting__mdt.Storefront_Base_URI__c, e.g. https://sfccdev.
+     * carajewellers.com/en-ae) to any relative link; an already-absolute
+     * link is left untouched. SFCC usually returns the path with its own
+     * locale (/en-AE/pay/deposit?...), so in that case only the base's
+     * domain is used — otherwise the locale ends up twice (/en-ae/en-AE/).
+     */
+    @TestVisible
+    private static String buildStorefrontUrl(String rawLink) {
+        if (String.isBlank(rawLink)) {
+            return rawLink;
+        }
+        if (rawLink.toLowerCase().startsWith('http://') || rawLink.toLowerCase().startsWith('https://')) {
+            return rawLink;
+        }
+
+        String baseUri = CARASplitPaymentSettings.getStorefrontBaseUri();
+        if (String.isBlank(baseUri)) {
+            return rawLink;
+        }
+
+        String normalizedBase = baseUri.endsWith('/') ? baseUri.removeEnd('/') : baseUri;
+        String normalizedPath = rawLink.startsWith('/') ? rawLink : '/' + rawLink;
+        if (Pattern.matches('^/[a-zA-Z]{2}-[a-zA-Z]{2}/.*', normalizedPath)) {
+            Url baseUrl = new Url(normalizedBase);
+            normalizedBase = baseUrl.getProtocol() + '://' + baseUrl.getAuthority();
+        }
+        return normalizedBase + normalizedPath;
     }
 
 
@@ -116,41 +151,76 @@ public with sharing class CARASplitPaymentNotificationService {
     }
 
 
+    /*
+     * Header/footer/nav links come from CARAEmailBrandingUtil, the same
+     * shared source of truth used by the appointment confirmation and
+     * custom product request confirmation emails.
+     */
+    @TestVisible
     private static String buildDepositEmailBody(
         String firstName,
         String requestName,
         Decimal depositAmount,
         String depositLink
     ) {
-        return '<div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">' +
-            '<h2 style="color: #7c5a2e;">Your deposit is ready to pay</h2>' +
-            '<p>Hi <b>' + firstName + '</b>,</p>' +
-            '<p>Your custom piece <b>' + requestName + '</b> has been approved. ' +
-            'Please pay your deposit of <b>' + formatAmount(depositAmount) + '</b> to begin production.</p>' +
-            '<p><a href="' + depositLink + '" style="display:inline-block;padding:12px 24px;background:#7c5a2e;color:#fff;' +
-            'text-decoration:none;border-radius:4px;">Pay Deposit</a></p>' +
-            '<p>If the button does not work, copy and paste this link into your browser:<br/>' + depositLink + '</p>' +
-            '<br/><p>Best regards,<br/><b>Cara Jewellers</b></p>' +
-            '</div>';
+        String bodyRows =
+            '<tr><td align="center" style="padding: 0 30px 20px 30px;">' +
+            '<p style="margin: 0; font-family: \'Playfair Display\', Georgia, \'Times New Roman\', serif; font-weight: 700; font-size: 28px; line-height: 36px; text-align: center; text-transform: uppercase; color: #000000;">Your deposit is ready to pay</p>' +
+            '</td></tr>' +
+
+            '<tr><td align="center" style="padding: 0 30px 25px 30px;">' +
+            '<p style="margin: 0 0 10px 0; font-size: 16px; line-height: 22px; color: #000000;">Hi <b>' + firstName + '</b>,</p>' +
+            '<p style="margin: 0; font-size: 16px; line-height: 22px; color: #000000;">Your custom piece <b>' + requestName + '</b> has been approved. Please pay your deposit of <b>' + formatAmount(depositAmount) + '</b> to begin production.</p>' +
+            '</td></tr>' +
+
+            '<tr><td align="center" style="padding: 0 30px 15px 30px;">' +
+            '<table cellpadding="0" cellspacing="0"><tr>' +
+            '<td align="center" style="background-color: #2a8ca4; border-radius: 10px;">' +
+            '<a href="' + depositLink + '" style="display: inline-block; padding: 14px 35px; font-size: 16px; color: #ffffff; text-decoration: none; font-weight: 500;">Pay Deposit</a>' +
+            '</td></tr></table>' +
+            '</td></tr>' +
+
+            '<tr><td align="center" style="padding: 0 30px 25px 30px;">' +
+            '<p style="margin: 0; font-size: 13px; line-height: 19px; color: #000000;">If the button does not work, copy and paste this link into your browser:<br/>' + depositLink + '</p>' +
+            '</td></tr>' +
+
+            CARAEmailBrandingUtil.divider();
+
+        return CARAEmailBrandingUtil.wrapEmail(bodyRows);
     }
 
 
+    @TestVisible
     private static String buildBalanceEmailBody(
         String firstName,
         String orderNumber,
         Decimal remainingAmount,
         String balanceLink
     ) {
-        return '<div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">' +
-            '<h2 style="color: #7c5a2e;">Your piece is ready</h2>' +
-            '<p>Hi <b>' + firstName + '</b>,</p>' +
-            '<p>Great news — your order <b>' + orderNumber + '</b> is ready for delivery. ' +
-            'Please pay the remaining balance of <b>' + formatAmount(remainingAmount) + '</b> to proceed.</p>' +
-            '<p><a href="' + balanceLink + '" style="display:inline-block;padding:12px 24px;background:#7c5a2e;color:#fff;' +
-            'text-decoration:none;border-radius:4px;">Pay Balance</a></p>' +
-            '<p>If the button does not work, copy and paste this link into your browser:<br/>' + balanceLink + '</p>' +
-            '<br/><p>Best regards,<br/><b>Cara Jewellers</b></p>' +
-            '</div>';
+        String bodyRows =
+            '<tr><td align="center" style="padding: 0 30px 20px 30px;">' +
+            '<p style="margin: 0; font-family: \'Playfair Display\', Georgia, \'Times New Roman\', serif; font-weight: 700; font-size: 28px; line-height: 36px; text-align: center; text-transform: uppercase; color: #000000;">Your piece is ready</p>' +
+            '</td></tr>' +
+
+            '<tr><td align="center" style="padding: 0 30px 25px 30px;">' +
+            '<p style="margin: 0 0 10px 0; font-size: 16px; line-height: 22px; color: #000000;">Hi <b>' + firstName + '</b>,</p>' +
+            '<p style="margin: 0; font-size: 16px; line-height: 22px; color: #000000;">Great news — your order <b>' + orderNumber + '</b> is ready for delivery. Please pay the remaining balance of <b>' + formatAmount(remainingAmount) + '</b> to proceed.</p>' +
+            '</td></tr>' +
+
+            '<tr><td align="center" style="padding: 0 30px 15px 30px;">' +
+            '<table cellpadding="0" cellspacing="0"><tr>' +
+            '<td align="center" style="background-color: #2a8ca4; border-radius: 10px;">' +
+            '<a href="' + balanceLink + '" style="display: inline-block; padding: 14px 35px; font-size: 16px; color: #ffffff; text-decoration: none; font-weight: 500;">Pay Balance</a>' +
+            '</td></tr></table>' +
+            '</td></tr>' +
+
+            '<tr><td align="center" style="padding: 0 30px 25px 30px;">' +
+            '<p style="margin: 0; font-size: 13px; line-height: 19px; color: #000000;">If the button does not work, copy and paste this link into your browser:<br/>' + balanceLink + '</p>' +
+            '</td></tr>' +
+
+            CARAEmailBrandingUtil.divider();
+
+        return CARAEmailBrandingUtil.wrapEmail(bodyRows);
     }
 
 

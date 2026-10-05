@@ -47,6 +47,11 @@
     </fieldPermissions>
     <fieldPermissions>
         <editable>true</editable>
+        <field>Case.Follow_Up_Reminder_Sent__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>true</editable>
         <field>Case.Next_Action_Date__c</field>
         <readable>true</readable>
     </fieldPermissions>

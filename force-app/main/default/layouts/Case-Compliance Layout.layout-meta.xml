@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Layout xmlns="http://soap.sforce.com/2006/04/metadata">
     <emailDefault>false</emailDefault>
-    <excludeButtons>OpenSlackRecordChannel</excludeButtons>
     <layoutSections>
         <customLabel>false</customLabel>
         <detailHeading>false</detailHeading>
@@ -269,6 +268,14 @@
         </relatedContentItems>
     </relatedContent>
     <relatedLists>
+        <fields>NAME</fields>
+        <fields>Product_Name__c</fields>
+        <fields>Piece_Type__c</fields>
+        <fields>Status__c</fields>
+        <fields>CREATED_DATE</fields>
+        <relatedList>Custom_Product_Request__c.Case__c</relatedList>
+    </relatedLists>
+    <relatedLists>
         <fields>CreatedDate</fields>
         <fields>StepStatus</fields>
         <fields>OriginalActor</fields>
@@ -305,19 +312,8 @@
         <relatedList>RelatedHistoryList</relatedList>
     </relatedLists>
     <relatedLists>
-        <relatedList>RelatedAttachmentList</relatedList>
-    </relatedLists>
-    <relatedLists>
         <fields>NAME</fields>
         <relatedList>Chat_Message__c.Case__c</relatedList>
-    </relatedLists>
-    <relatedLists>
-        <fields>NAME</fields>
-        <fields>Product_Name__c</fields>
-        <fields>Piece_Type__c</fields>
-        <fields>Status__c</fields>
-        <fields>CREATED_DATE</fields>
-        <relatedList>Custom_Product_Request__c.Case__c</relatedList>
     </relatedLists>
     <relatedObjects>ContactId</relatedObjects>
     <relatedObjects>AccountId</relatedObjects>

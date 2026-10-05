@@ -48,6 +48,9 @@ public without sharing class CustomiseRequestController {
         'Email', 'Phone', 'WhatsApp'
     };
 
+    private static final String SALES_FOLLOW_UP_RECORD_TYPE = 'Sales_Follow_up';
+    private static final String CASE_TYPE_CUSTOMIZED_PRODUCT = 'Customized product';
+
     private static final Set<String> VALID_IMAGE_EXTENSIONS = new Set<String>{
         'png', 'jpg', 'jpeg', 'webp', 'gif'
     };
@@ -246,6 +249,7 @@ public without sharing class CustomiseRequestController {
         caseRecord.Subject = 'Customisation Request - ' + input.pieceType;
         caseRecord.Description = buildCaseDescription(input);
         caseRecord.Origin = 'Web';
+        caseRecord.Type = CASE_TYPE_CUSTOMIZED_PRODUCT;
         caseRecord.SuppliedName = input.fullName.trim();
         caseRecord.SuppliedEmail = input.email.trim();
         if (String.isNotBlank(input.phone)) {
@@ -255,12 +259,40 @@ public without sharing class CustomiseRequestController {
             ? input.preferredContactMethod
             : 'Email';
 
-        Id generalEnquiryRtId = generalEnquiryRecordTypeId();
-        if (generalEnquiryRtId != null) {
-            caseRecord.RecordTypeId = generalEnquiryRtId;
+        Id salesFollowUpRtId = salesFollowUpRecordTypeId();
+        if (salesFollowUpRtId != null) {
+            caseRecord.RecordTypeId = salesFollowUpRtId;
+        }
+
+        Contact matchingContact = findContactByEmail(input.email.trim());
+        if (matchingContact != null) {
+            caseRecord.ContactId = matchingContact.Id;
+            if (matchingContact.AccountId != null) {
+                caseRecord.AccountId = matchingContact.AccountId;
+            }
         }
 
         return caseRecord;
+    }
+
+    /*
+     * Attaches the Case to an existing Contact when exactly one Contact
+     * matches the submitted email — same lookup pattern CARACaseRestService
+     * already uses for the chat API. Left unset (not an error) when there's
+     * no match or the email is ambiguous across multiple Contacts, since
+     * this wizard must still work for brand-new customers with no Contact
+     * record yet.
+     */
+    private static Contact findContactByEmail(String emailAddress) {
+        List<Contact> matches = [
+            SELECT Id, AccountId
+            FROM Contact
+            WHERE Email = :emailAddress.toLowerCase()
+            WITH SYSTEM_MODE
+            ORDER BY CreatedDate ASC
+            LIMIT 2
+        ];
+        return matches.size() == 1 ? matches[0] : null;
     }
 
     private static String buildCaseDescription(CustomisationRequestInput input) {
@@ -364,6 +396,7 @@ public without sharing class CustomiseRequestController {
         email.setToAddresses(new String[]{ input.email.trim() });
         email.setSubject('We\'ve received your custom ' + input.pieceType + ' request');
         email.setPlainTextBody(confirmationEmailBody(input, caseNumber));
+        email.setHtmlBody(confirmationEmailHtmlBody(input, caseNumber));
         email.setSaveAsActivity(false);
 
         Id orgWideAddressId = firstVerifiedOrgWideEmailAddressId();
@@ -382,6 +415,40 @@ public without sharing class CustomiseRequestController {
             'Warm regards,\nThe Cara Jewellers Team';
     }
 
+    /*
+     * HTML counterpart of confirmationEmailBody(), sent alongside the plain
+     * text version. Header/footer/nav links come from CARAEmailBrandingUtil,
+     * the same shared source of truth used by the appointment confirmation
+     * and payment-link emails. Public (rather than private) so sandbox QA
+     * can render/send a one-off preview without exercising the full guest
+     * submission pipeline (Case + file-chunk creation).
+     */
+    public static String confirmationEmailHtmlBody(CustomisationRequestInput input, String caseNumber) {
+        String bodyRows =
+            '<tr><td align="center" style="padding: 0 30px 20px 30px;">' +
+            '<p style="margin: 0; font-family: \'Playfair Display\', Georgia, \'Times New Roman\', serif; font-weight: 700; font-size: 28px; line-height: 36px; text-align: center; text-transform: uppercase; color: #000000;">We\'ve received your request</p>' +
+            '</td></tr>' +
+
+            '<tr><td align="center" style="padding: 0 30px 25px 30px;">' +
+            '<p style="margin: 0 0 10px 0; font-size: 16px; line-height: 22px; color: #000000;">Hi <b>' + input.fullName.trim() + '</b>,</p>' +
+            '<p style="margin: 0; font-size: 16px; line-height: 22px; color: #000000;">Thank you for telling us about your custom ' + input.pieceType + ' — we\'ve received your request.</p>' +
+            '</td></tr>' +
+
+            '<tr><td style="padding: 0 20px 20px 20px;">' +
+            '<table width="100%" cellpadding="0" cellspacing="0"><tr>' +
+            '<td align="left" style="background-color: #bfdde4; padding: 14px 16px; font-size: 16px; font-weight: 700; color: #000000;">Reference number &nbsp;#' + caseNumber + '</td>' +
+            '</tr></table>' +
+            '</td></tr>' +
+
+            '<tr><td align="center" style="padding: 0 30px 25px 30px;">' +
+            '<p style="margin: 0; font-size: 16px; line-height: 22px; color: #000000;">Our designers will review your brief and be in touch within two business days to discuss your vision, materials and next steps.</p>' +
+            '</td></tr>' +
+
+            CARAEmailBrandingUtil.divider();
+
+        return CARAEmailBrandingUtil.wrapEmail(bodyRows);
+    }
+
     private static Id firstVerifiedOrgWideEmailAddressId() {
         List<OrgWideEmailAddress> addresses = [
             SELECT Id FROM OrgWideEmailAddress WHERE IsVerified = true WITH SYSTEM_MODE LIMIT 1
@@ -389,10 +456,10 @@ public without sharing class CustomiseRequestController {
         return addresses.isEmpty() ? null : addresses[0].Id;
     }
 
-    private static Id generalEnquiryRecordTypeId() {
+    private static Id salesFollowUpRecordTypeId() {
         List<RecordType> rts = [
             SELECT Id FROM RecordType
-            WHERE SObjectType = 'Case' AND DeveloperName = 'General_Enquiry' AND IsActive = true
+            WHERE SObjectType = 'Case' AND DeveloperName = :SALES_FOLLOW_UP_RECORD_TYPE AND IsActive = true
             WITH SYSTEM_MODE
             LIMIT 1
         ];

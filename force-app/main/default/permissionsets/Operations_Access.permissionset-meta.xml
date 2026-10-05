@@ -10,6 +10,26 @@
     </classAccesses>
     <description>Operations team: fulfillment-side Order/OrderItem visibility, Shipment, Store, Time Slot and Appointment management. Excludes Order financial fields, which remain Finance-owned.</description>
     <fieldPermissions>
+        <editable>false</editable>
+        <field>Account.Duplicate_Of__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>Account.Is_Guest__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>Account.ParentId</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
+        <editable>false</editable>
+        <field>Contact.Is_Guest__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+    <fieldPermissions>
         <editable>true</editable>
         <field>Order.Confirmation_Status__c</field>
         <readable>true</readable>

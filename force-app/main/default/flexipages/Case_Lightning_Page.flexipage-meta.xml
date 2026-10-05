@@ -80,25 +80,6 @@
         </itemInstances>
         <itemInstances>
             <componentInstance>
-                <componentName>caseCustomProductManager</componentName>
-                <identifier>c_caseCustomProductManager</identifier>
-                <visibilityRule>
-                    <booleanFilter>1 AND 2</booleanFilter>
-                    <criteria>
-                        <leftValue>{!Record.RecordType.Name}</leftValue>
-                        <operator>EQUAL</operator>
-                        <rightValue>Sales Follow-up</rightValue>
-                    </criteria>
-                    <criteria>
-                        <leftValue>{!Record.Type}</leftValue>
-                        <operator>NE</operator>
-                        <rightValue>Ready-made product</rightValue>
-                    </criteria>
-                </visibilityRule>
-            </componentInstance>
-        </itemInstances>
-        <itemInstances>
-            <componentInstance>
                 <componentInstanceProperties>
                     <name>context</name>
                     <value>RECORD</value>

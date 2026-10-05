@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Duplicate_Of__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Set by CARAOrderSyncService when an SFCC order&apos;s email matched this Account but the order&apos;s customerId didn&apos;t match this Account&apos;s External_ID__c. Points at the original Account so Ops can find and reconcile the two identities.</description>
+    <label>Duplicate Of</label>
+    <referenceTo>Account</referenceTo>
+    <relationshipLabel>Duplicate Accounts</relationshipLabel>
+    <relationshipName>Duplicate_Accounts</relationshipName>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <type>Lookup</type>
+</CustomField>

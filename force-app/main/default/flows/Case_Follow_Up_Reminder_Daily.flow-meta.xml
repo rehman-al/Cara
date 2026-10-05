@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>67.0</apiVersion>
+    <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
+    <assignments>
+        <name>Mark_Reminder_Sent</name>
+        <label>Mark Reminder Sent</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <assignmentItems>
+            <assignToReference>$Record.Follow_Up_Reminder_Sent__c</assignToReference>
+            <operator>Assign</operator>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Update_Case_Reminder_Sent</targetReference>
+        </connector>
+    </assignments>
+    <decisions>
+        <name>Is_Due_Today_Or_Overdue</name>
+        <label>Is Due Today Or Overdue</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <defaultConnectorLabel>Not Due Yet</defaultConnectorLabel>
+        <rules>
+            <name>Due_Today_Or_Overdue</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>$Record.Next_Action_Date__c</leftValueReference>
+                <operator>LessThanOrEqualTo</operator>
+                <rightValue>
+                    <elementReference>$Flow.CurrentDate</elementReference>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Create_Follow_Up_Reminder_Task</targetReference>
+            </connector>
+            <label>Due Today Or Overdue</label>
+        </rules>
+    </decisions>
+    <description>SOW Point SC-9 - Follow-up reminders. Daily batch: for every open Case with a Next_Action_Date__c set and no reminder sent yet, checks whether that date is due today or earlier; if so, creates a Task (with a native pop-up reminder) assigned to the Case owner, then flags the Case so it is not re-reminded until Next_Action_Date__c next changes (see Case_Follow_Up_Reminder_Reset). The start filters can only hold literal values, so the &quot;is it due yet&quot; comparison against today&apos;s date happens in this Decision instead of in the Start element.</description>
+    <environments>Default</environments>
+    <formulas>
+        <name>Reminder_DateTime</name>
+        <dataType>DateTime</dataType>
+        <expression>DATETIMEVALUE({!$Record.Next_Action_Date__c}) + 9/24</expression>
+    </formulas>
+    <interviewLabel>Case Follow-Up Reminder - Daily {!$Flow.CurrentDateTime}</interviewLabel>
+    <label>Case Follow-Up Reminder - Daily</label>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>CanvasMode</name>
+        <value>
+            <stringValue>AUTO_LAYOUT_CANVAS</stringValue>
+        </value>
+    </processMetadataValues>
+    <processMetadataValues>
+        <name>OriginBuilderType</name>
+        <value>
+            <stringValue>LightningFlowBuilder</stringValue>
+        </value>
+    </processMetadataValues>
+    <processType>AutoLaunchedFlow</processType>
+    <recordCreates>
+        <name>Create_Follow_Up_Reminder_Task</name>
+        <label>Create Follow-Up Reminder Task</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Mark_Reminder_Sent</targetReference>
+        </connector>
+        <inputAssignments>
+            <field>ActivityDate</field>
+            <value>
+                <elementReference>$Record.Next_Action_Date__c</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Description</field>
+            <value>
+                <elementReference>Follow_Up_Task_Description</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>IsReminderSet</field>
+            <value>
+                <booleanValue>true</booleanValue>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>OwnerId</field>
+            <value>
+                <elementReference>$Record.OwnerId</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>ReminderDateTime</field>
+            <value>
+                <elementReference>Reminder_DateTime</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Status</field>
+            <value>
+                <stringValue>Not Started</stringValue>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>Subject</field>
+            <value>
+                <elementReference>Follow_Up_Task_Subject</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>WhatId</field>
+            <value>
+                <elementReference>$Record.Id</elementReference>
+            </value>
+        </inputAssignments>
+        <inputAssignments>
+            <field>WhoId</field>
+            <value>
+                <elementReference>$Record.ContactId</elementReference>
+            </value>
+        </inputAssignments>
+        <object>Task</object>
+    </recordCreates>
+    <recordUpdates>
+        <name>Update_Case_Reminder_Sent</name>
+        <label>Update Case Reminder Sent</label>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <inputReference>$Record</inputReference>
+    </recordUpdates>
+    <start>
+        <locationX>0</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Is_Due_Today_Or_Overdue</targetReference>
+        </connector>
+        <filterLogic>and</filterLogic>
+        <filters>
+            <field>IsClosed</field>
+            <operator>EqualTo</operator>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </filters>
+        <filters>
+            <field>Follow_Up_Reminder_Sent__c</field>
+            <operator>EqualTo</operator>
+            <value>
+                <booleanValue>false</booleanValue>
+            </value>
+        </filters>
+        <object>Case</object>
+        <schedule>
+            <frequency>Daily</frequency>
+            <startDate>2026-10-06</startDate>
+            <startTime>06:00:00.000Z</startTime>
+        </schedule>
+        <triggerType>Scheduled</triggerType>
+    </start>
+    <status>Active</status>
+    <textTemplates>
+        <name>Follow_Up_Task_Description</name>
+        <isViewedAsPlainText>true</isViewedAsPlainText>
+        <text>Automated follow-up reminder.
+
+Case: {!$Record.CaseNumber}
+Subject: {!$Record.Subject}
+Next Action Date: {!$Record.Next_Action_Date__c}
+
+Follow up with the customer and update the Case&apos;s Next Action Date once this is handled.</text>
+    </textTemplates>
+    <textTemplates>
+        <name>Follow_Up_Task_Subject</name>
+        <isViewedAsPlainText>true</isViewedAsPlainText>
+        <text>Follow up on Case {!$Record.CaseNumber}</text>
+    </textTemplates>
+</Flow>
