@@ -18,12 +18,12 @@
  * running user, or guest-created Cases would wrongly look like new
  * customers and get duplicate Accounts/Contacts created for them.
  *
- * New-customer Accounts are created as person Accounts EXCEPT when the
- * running context is the Guest User - the Guest User license does not
- * support person Accounts at all (its profile cannot even be assigned the
- * Person Account record type; attempting it throws
- * INVALID_CROSS_REFERENCE_KEY), so guest-created Cases (e.g. the Customise
- * wizard) still get the old Business Account + separate Contact pair.
+ * New customers are created as Person Accounts. Internal-user Cases are
+ * resolved here before insert. An unmatched guest Case is intentionally
+ * left without AccountId/ContactId so the system-context
+ * Link_Case_To_Account_By_Email after-save flow can create the Person
+ * Account and link both fields; a guest license cannot directly insert a
+ * Person Account record type.
  */
 public without sharing class CaseCustomerMatchService {
 
@@ -52,11 +52,9 @@ public without sharing class CaseCustomerMatchService {
         Boolean isGuestContext = UserInfo.getUserType() == 'Guest';
 
         List<Account> accountsToInsert = new List<Account>();
-        List<Contact> contactsToInsert = new List<Contact>();
-        // Parallel list - index-aligned with accountsToInsert (and, for the
-        // guest path, contactsToInsert too) - of every Case waiting on that
-        // not-yet-inserted Account/Contact, so the DML result can be fanned
-        // back out to all of them.
+        // Parallel list, index-aligned with accountsToInsert, of every Case
+        // waiting on that not-yet-inserted Person Account so the DML result
+        // can be fanned back out to all of them.
         List<List<Case>> casesPendingNewAccount = new List<List<Case>>();
 
         for (String normalizedEmail : casesByNormalizedEmail.keySet()) {
@@ -73,33 +71,25 @@ public without sharing class CaseCustomerMatchService {
                 continue;
             }
 
+            if (isGuestContext) {
+                // The active after-save flow handles this in system context.
+                // Leaving both relationship fields null is also what allows
+                // that flow's entry criteria to run.
+                continue;
+            }
+
             Case templateCase = casesForEmail[0];
             String normalizedName = firstNonBlank(templateCase.SuppliedName, templateCase.SuppliedCompany, templateCase.SuppliedEmail.trim());
             List<String> nameParts = splitName(normalizedName);
 
-            if (isGuestContext) {
-                // The Guest User license cannot be assigned the Person
-                // Account record type at all - fall back to a plain
-                // Business Account + separate Contact, same as before.
-                Account newBusinessAccount = new Account(Name = normalizedName);
-                accountsToInsert.add(newBusinessAccount);
-                contactsToInsert.add(new Contact(
-                    FirstName = nameParts[0],
-                    LastName = nameParts[1],
-                    Email = templateCase.SuppliedEmail.trim()
-                ));
-            } else {
-                // A person Account IS the Contact (FirstName/LastName/
-                // PersonEmail live on the Account itself) - inserting it
-                // alone auto-creates the underlying Contact, so no separate
-                // Contact insert is needed or wanted here.
-                accountsToInsert.add(new Account(
-                    RecordTypeId = CARAPersonAccountUtil.getRecordTypeId(),
-                    FirstName = nameParts[0],
-                    LastName = nameParts[1],
-                    PersonEmail = templateCase.SuppliedEmail.trim()
-                ));
-            }
+            // A Person Account is also the customer Contact. Inserting it
+            // auto-creates the underlying PersonContact record.
+            accountsToInsert.add(new Account(
+                RecordTypeId = CARAPersonAccountUtil.getRecordTypeId(),
+                FirstName = nameParts[0],
+                LastName = nameParts[1],
+                PersonEmail = templateCase.SuppliedEmail.trim()
+            ));
             casesPendingNewAccount.add(casesForEmail);
         }
 
@@ -107,33 +97,18 @@ public without sharing class CaseCustomerMatchService {
             return;
         }
 
-        if (isGuestContext) {
-            insertAllowingDuplicates(accountsToInsert);
-            for (Integer i = 0; i < accountsToInsert.size(); i++) {
-                contactsToInsert[i].AccountId = accountsToInsert[i].Id;
-            }
-            insertAllowingDuplicates(contactsToInsert);
+        insertAllowingDuplicates(accountsToInsert);
 
-            for (Integer i = 0; i < contactsToInsert.size(); i++) {
-                for (Case caseRecord : casesPendingNewAccount[i]) {
-                    caseRecord.ContactId = contactsToInsert[i].Id;
-                    caseRecord.AccountId = accountsToInsert[i].Id;
-                }
-            }
-        } else {
-            insertAllowingDuplicates(accountsToInsert);
+        Map<Id, Account> insertedAccountsById = new Map<Id, Account>(
+            [SELECT Id, PersonContactId FROM Account WHERE Id IN :accountsToInsert WITH SYSTEM_MODE]
+        );
 
-            Map<Id, Account> insertedAccountsById = new Map<Id, Account>(
-                [SELECT Id, PersonContactId FROM Account WHERE Id IN :accountsToInsert WITH SYSTEM_MODE]
-            );
-
-            for (Integer i = 0; i < accountsToInsert.size(); i++) {
-                Id newAccountId = accountsToInsert[i].Id;
-                Id newContactId = insertedAccountsById.get(newAccountId).PersonContactId;
-                for (Case caseRecord : casesPendingNewAccount[i]) {
-                    caseRecord.ContactId = newContactId;
-                    caseRecord.AccountId = newAccountId;
-                }
+        for (Integer i = 0; i < accountsToInsert.size(); i++) {
+            Id newAccountId = accountsToInsert[i].Id;
+            Id newContactId = insertedAccountsById.get(newAccountId).PersonContactId;
+            for (Case caseRecord : casesPendingNewAccount[i]) {
+                caseRecord.ContactId = newContactId;
+                caseRecord.AccountId = newAccountId;
             }
         }
     }

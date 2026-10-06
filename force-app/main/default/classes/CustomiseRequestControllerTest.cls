@@ -51,8 +51,8 @@ private class CustomiseRequestControllerTest {
         System.assertEquals('jane.doe@example.com', createdCase.SuppliedEmail);
         System.assertEquals('Customized product', createdCase.Type, 'Case Type should be set for the custom product LWC visibility rule.');
         System.assertEquals('Sales_Follow_up', createdCase.RecordType.DeveloperName, 'Case should use the Sales Follow-up record type.');
-        System.assertNotEquals(null, createdCase.ContactId, 'No Contact matched this email, so CaseCustomerMatchTrigger should have created one.');
-        System.assertNotEquals(null, createdCase.AccountId, 'The newly created Contact\'s Account should be attached too.');
+        System.assertNotEquals(null, createdCase.ContactId, 'No Contact matched this email, so the Person Account contact should be attached.');
+        System.assertNotEquals(null, createdCase.AccountId, 'The newly created Person Account should be attached too.');
 
         Contact createdContact = [SELECT Email FROM Contact WHERE Id = :createdCase.ContactId];
         System.assertEquals('jane.doe@example.com', createdContact.Email, 'New Contact should carry the Case\'s supplied email.');
@@ -117,6 +117,22 @@ private class CustomiseRequestControllerTest {
                 CustomiseRequestController.submitCustomisationRequestV2(JSON.serialize(baseInput()));
             System.assertEquals(true, result.success, 'Guest user should be able to submit via SYSTEM_MODE DML.');
         }
+
+        Case createdCase = [
+            SELECT AccountId, ContactId, Account.IsPersonAccount, Account.PersonContactId
+            FROM Case
+            LIMIT 1
+        ];
+        System.assertEquals(
+            true,
+            createdCase.Account.IsPersonAccount,
+            'A guest-created customer should be a Person Account.'
+        );
+        System.assertEquals(
+            createdCase.Account.PersonContactId,
+            createdCase.ContactId,
+            'The Case should use the Person Account contact.'
+        );
     }
 
     @isTest

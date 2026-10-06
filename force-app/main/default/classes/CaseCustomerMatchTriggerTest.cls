@@ -39,9 +39,19 @@ private class CaseCustomerMatchTriggerTest {
         insert newCase;
         Test.stopTest();
 
-        Case result = [SELECT ContactId, AccountId FROM Case WHERE Id = :newCase.Id];
+        Case result = [
+            SELECT ContactId, AccountId, Account.IsPersonAccount, Account.PersonContactId
+            FROM Case
+            WHERE Id = :newCase.Id
+        ];
         System.assertNotEquals(null, result.ContactId, 'A new Contact should have been created and attached.');
         System.assertNotEquals(null, result.AccountId, 'A new Account should have been created and attached.');
+        System.assertEquals(true, result.Account.IsPersonAccount, 'A new customer should be created as a Person Account.');
+        System.assertEquals(
+            result.Account.PersonContactId,
+            result.ContactId,
+            'Case ContactId should be the Person Account contact.'
+        );
 
         Contact createdContact = [SELECT Email, FirstName, LastName, AccountId FROM Contact WHERE Id = :result.ContactId];
         System.assertEquals('new.customer@example.com', createdContact.Email, 'Contact email should match the Case\'s supplied email.');
