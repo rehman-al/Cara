@@ -9,8 +9,12 @@ import createRequest from '@salesforce/apex/CaseCustomProductController.createRe
 import updateRequest from '@salesforce/apex/CaseCustomProductController.updateRequest';
 import deleteRequest from '@salesforce/apex/CaseCustomProductController.deleteRequest';
 import getRequestFiles from '@salesforce/apex/CaseCustomProductController.getRequestFiles';
+import getActiveOptions from '@salesforce/apex/CustomiseRequestController.getActiveOptions';
+
+const STONE_TYPE_OPTION_TYPE = 'Stone Type';
 
 const REQUEST_ACTIONS = [
+    { label: 'Payment & History', name: 'history' },
     { label: 'Files', name: 'manageFiles' },
     { label: 'Delete', name: 'delete' }
 ];
@@ -72,6 +76,7 @@ const NEW_REQUEST = {
     Product__c: null,
     Size__c: '',
     Metal__c: '',
+    Stone_Type__c: '',
     Diamond_Carat__c: null,
     Diamond_Shape__c: '',
     Diamond_Type__c: '',
@@ -110,10 +115,14 @@ export default class CaseCustomProductManager extends NavigationMixin(
     draft = { ...NEW_REQUEST };
 
     requestFiles = [];
+    stoneTypeValues = [];
 
     selectedRequestId = null;
     selectedProductName = '';
     selectedPreviewFile = null;
+
+    historyRequestId = null;
+    historyRequestName = '';
 
     isModalOpen = false;
     isAttachmentModalOpen = false;
@@ -142,7 +151,8 @@ export default class CaseCustomProductManager extends NavigationMixin(
         'Draft',
         'Under Review',
         'Approved',
-        'Rejected'
+        'Rejected',
+        'Failed'
     ].map((value) => ({
         label: value,
         value
@@ -211,6 +221,36 @@ export default class CaseCustomProductManager extends NavigationMixin(
         return !this.draft.Category__c;
     }
 
+    /*
+     * Stone types come from the same CSR-managed Customisation_Option__c
+     * catalog the customer-facing Customise wizard uses, so both stay in sync.
+     */
+    @wire(getActiveOptions)
+    wiredOptions(result) {
+        if (result.data) {
+            this.stoneTypeValues = (result.data[STONE_TYPE_OPTION_TYPE] || []).map(
+                (opt) => opt.value
+            );
+        } else if (result.error) {
+            this.stoneTypeValues = [];
+        }
+    }
+
+    get stoneTypeOptions() {
+        const values = [...this.stoneTypeValues];
+        const current = this.draft.Stone_Type__c;
+
+        // Keep a saved value selectable even if it was later retired from the catalog.
+        if (current && !values.includes(current)) {
+            values.push(current);
+        }
+
+        return values.map((value) => ({
+            label: value,
+            value
+        }));
+    }
+
     @wire(getRequests, { caseId: '$recordId' })
     wiredRequests(result) {
         this.wiredRequestsResult = result;
@@ -265,7 +305,10 @@ export default class CaseCustomProductManager extends NavigationMixin(
     handleRequestAction(event) {
         const { action, row } = event.detail;
 
-        if (action.name === 'manageFiles') {
+        if (action.name === 'history') {
+            this.historyRequestId = row.Id;
+            this.historyRequestName = row.Name;
+        } else if (action.name === 'manageFiles') {
             this.selectedRequestId = row.Id;
             this.selectedProductName =
                 row.Product_Name__c || 'Product';
@@ -310,6 +353,15 @@ export default class CaseCustomProductManager extends NavigationMixin(
 
         this.isModalOpen = false;
         this.resetDraft();
+    }
+
+    get isHistoryModalOpen() {
+        return Boolean(this.historyRequestId);
+    }
+
+    closeHistoryModal() {
+        this.historyRequestId = null;
+        this.historyRequestName = '';
     }
 
     closeAttachmentModal() {

@@ -11,6 +11,16 @@
         <reevaluateOnChange>false</reevaluateOnChange>
     </fieldUpdates>
     <fieldUpdates>
+        <fullName>Update_KYC_Approval_Initiated</fullName>
+        <field>KYC_Approval_Initiated__c</field>
+        <literalValue>1</literalValue>
+        <name>Update KYC Approval Initiated</name>
+        <notifyAssignee>false</notifyAssignee>
+        <operation>Literal</operation>
+        <protected>false</protected>
+        <reevaluateOnChange>false</reevaluateOnChange>
+    </fieldUpdates>
+    <fieldUpdates>
         <fullName>Update_Status_Approve</fullName>
         <field>Status</field>
         <literalValue>Compliance Approved</literalValue>

@@ -17,7 +17,7 @@ public with sharing class CARASplitPaymentSettings {
     private static final Decimal FALLBACK_DEPOSIT_PERCENTAGE = 0.25;
     private static final Integer FALLBACK_MAX_RETRY_ATTEMPTS = 2;
     private static final Set<Integer> FALLBACK_RETRYABLE_STATUS_CODES = new Set<Integer>{ 502 };
-    private static final String FALLBACK_STOREFRONT_BASE_URI = 'https://sfccdev.carajewellers.com/en-ae';
+    private static final String FALLBACK_STOREFRONT_BASE_URI = 'https://sfccstg.carajewellers.com/en-ae';
 
     private static Split_Payment_Setting__mdt cachedSetting;
     private static Boolean loaded = false;

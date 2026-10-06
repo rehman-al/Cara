@@ -76,7 +76,7 @@ public with sharing class CARASplitPaymentNotificationService {
      * guaranteed to return an absolute URL — a relative path has no
      * storefront domain to resolve against once it is dropped into an
      * email. Prepends the admin-configured storefront base (Split_Payment_
-     * Setting__mdt.Storefront_Base_URI__c, e.g. https://sfccdev.
+     * Setting__mdt.Storefront_Base_URI__c, e.g. https://sfccstg.
      * carajewellers.com/en-ae) to any relative link; an already-absolute
      * link is left untouched. SFCC usually returns the path with its own
      * locale (/en-AE/pay/deposit?...), so in that case only the base's

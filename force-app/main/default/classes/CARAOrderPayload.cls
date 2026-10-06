@@ -72,6 +72,12 @@ public class CARAOrderPayload {
         public PaymentCard paymentCard;
         public String paymentInstrumentId;
         public String paymentMethodId;
+        public PaymentTransaction paymentTransaction;
+    }
+
+    public class PaymentTransaction {
+        public Decimal amount;
+        public String transactionId;
     }
 
     public class ProductItem {
@@ -80,6 +86,13 @@ public class CARAOrderPayload {
         public Boolean bonusProductLineItem;
         public Decimal c_depositAmount;
         public Decimal c_quotedUnitPrice;
+        // Custom_Product_Request__c.Name (e.g. "CPR-00042"), echoed back by
+        // SFCC on a custom order's line item when it was supplied with the
+        // deposit basket (see CARASfscSplitPaymentService.DepositBasketRequest.
+        // cprNumber). An exact key for linkCustomProductRequests() below,
+        // taking priority over the c_depositAmount/c_quotedUnitPrice
+        // heuristic when present.
+        public String c_cprNumber;
         public Boolean gift;
         public String itemId;
         public String itemText;

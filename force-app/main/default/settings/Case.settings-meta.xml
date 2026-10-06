@@ -33,6 +33,19 @@
         <replyWithNewContentOnly>false</replyWithNewContentOnly>
         <routingAddresses>
             <addressType>EmailToCase</addressType>
+            <caseOrigin>Web enquiry</caseOrigin>
+            <casePriority>Medium</casePriority>
+            <createTask>false</createTask>
+            <emailAddress>trio.claude.ai@gmail.com</emailAddress>
+            <emailServicesAddress>trio.claude.ai@7-2nm2dgyu0qcp6ujn8sisavib2cmz66eb0a9d2dilqg6ldi7elt.fv-29wxhzfo2qa.are2s.case.sandbox.salesforce.com</emailServicesAddress>
+            <isPermsetControlled>false</isPermsetControlled>
+            <isVerified>true</isVerified>
+            <newEntityRecordType>Case.General_Enquiry</newEntityRecordType>
+            <routingName>E2C_test</routingName>
+            <saveEmailHeaders>false</saveEmailHeaders>
+        </routingAddresses>
+        <routingAddresses>
+            <addressType>EmailToCase</addressType>
             <caseOrigin>Email</caseOrigin>
             <casePriority>Medium</casePriority>
             <createTask>false</createTask>

@@ -98,6 +98,14 @@
                                 options={metalOptions}
                                 onchange={handleFieldChange}
                             ></lightning-combobox>
+                            <lightning-combobox
+                                data-form-field
+                                name="Stone_Type__c"
+                                label="Stone Type"
+                                value={draft.Stone_Type__c}
+                                options={stoneTypeOptions}
+                                onchange={handleFieldChange}
+                            ></lightning-combobox>
                             <lightning-input
                                 data-form-field
                                 name="Quantity__c"
@@ -301,6 +309,38 @@
                 <footer class="slds-modal__footer">
                     <lightning-button label="Generate Quote" variant="brand" onclick={generateQuote}></lightning-button>
                     <lightning-button label="Close" onclick={closeAttachmentModal}></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+    </template>
+
+    <template lwc:if={isHistoryModalOpen}>
+        <section
+            role="dialog"
+            tabindex="-1"
+            aria-modal="true"
+            aria-labelledby="history-modal-heading"
+            class="slds-modal slds-fade-in-open slds-modal_medium"
+        >
+            <div class="slds-modal__container">
+                <header class="slds-modal__header product-modal-header">
+                    <lightning-button-icon
+                        class="slds-modal__close"
+                        icon-name="utility:close"
+                        variant="bare-inverse"
+                        alternative-text="Close"
+                        onclick={closeHistoryModal}
+                    ></lightning-button-icon>
+                    <h2 id="history-modal-heading" class="slds-text-heading_medium">
+                        {historyRequestName} · Payment &amp; Activity History
+                    </h2>
+                </header>
+                <div class="slds-modal__content slds-var-p-around_medium">
+                    <c-cpr-activity-history request-id={historyRequestId} hide-header></c-cpr-activity-history>
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button label="Close" onclick={closeHistoryModal}></lightning-button>
                 </footer>
             </div>
         </section>

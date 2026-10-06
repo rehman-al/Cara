@@ -26,6 +26,7 @@ private class CARASfscSplitPaymentServiceTest {
         requestData.price = 1000;
         requestData.deposit = 250;
         requestData.shippingAddress = address;
+        requestData.cprNumber = 'CPR-00042';
         return requestData;
     }
 
@@ -55,6 +56,7 @@ private class CARASfscSplitPaymentServiceTest {
         Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(mock.capturedRequests[0].getBody());
         System.assertEquals('shopper@example.com', payload.get('customerLogin'));
         System.assertEquals('SKU_ID', payload.get('sku'));
+        System.assertEquals('CPR-00042', payload.get('cprNumber'));
         Map<String, Object> shippingAddress = (Map<String, Object>) payload.get('shippingAddress');
         System.assertEquals('AE', shippingAddress.get('countryCode'));
         System.assertEquals('test-secret-value', mock.capturedRequests[0].getHeader('X-SFSC-Order-Secret'));

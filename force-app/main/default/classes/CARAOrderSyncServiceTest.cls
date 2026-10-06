@@ -58,6 +58,39 @@ private class CARAOrderSyncServiceTest {
         Assert.areEqual(0, [SELECT COUNT() FROM Order WHERE OrderReferenceNumber = '00000502']);
     }
 
+    /**
+     * Order 00000198: an overlong customer name (over Account/Contact
+     * FirstName's 40-character limit) used to make the new Account's insert
+     * fail with STRING_TOO_LONG. splitName() now truncates FirstName/LastName
+     * to the standard Salesforce limits before insert, so the order
+     * synchronizes successfully instead.
+     */
+    @IsTest
+    static void overlongCustomerNameIsTruncatedSoOrderStillSucceeds() {
+        Map<String, Object> payload = buildPayload('00000198', false, 'overlong-name-198@20three.digital', 'cust-198');
+        String overlongFirstName = 'Abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz';
+        ((Map<String, Object>) payload.get('customerInfo')).put('customerName', overlongFirstName + ' Customer198');
+        Id stagingId = CARAOrderSyncService.capturePayload('00000198', JSON.serialize(payload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome outcome = CARAOrderSyncService.syncFromStaging(stagingId);
+        Test.stopTest();
+
+        Assert.isTrue(outcome.success, outcome.message);
+        Order orderRecord = [SELECT AccountId FROM Order WHERE Id = :outcome.orderId];
+        Account accountRecord = [SELECT FirstName, LastName FROM Account WHERE Id = :orderRecord.AccountId];
+        Assert.areEqual(overlongFirstName.substring(0, 40), accountRecord.FirstName);
+        Assert.areEqual('Customer198', accountRecord.LastName);
+
+        SFCC_Order_Staging__c stagingRecord = [
+            SELECT Sync_Status__c, Sync_Error__c
+            FROM SFCC_Order_Staging__c
+            WHERE Id = :stagingId
+        ];
+        Assert.areEqual('Synced', stagingRecord.Sync_Status__c);
+        Assert.isNull(stagingRecord.Sync_Error__c);
+    }
+
     @IsTest
     static void retryIncrementsRetryCountAndSucceedsOnceDataIsFixed() {
         Map<String, Object> badPayload = buildPayload('00000503', false, 'retry-fix@20three.digital', 'cust-503');
@@ -228,6 +261,51 @@ private class CARAOrderSyncServiceTest {
     }
 
     // =========================================================
+    // Regression (Cara Sandbox OST-0000047): once a customerId conflict has
+    // created a Duplicate_Of__c Account, the email resolves to two
+    // Registered Accounts. Later orders from either identity must resolve to
+    // the matching Account instead of failing with "Multiple registered
+    // accounts use customer email".
+    // =========================================================
+    @IsTest
+    static void ordersAfterCustomerIdConflictResolveToMatchingRegisteredAccount() {
+        String email = 'post-conflict@20three.digital';
+        CARAOrderSyncService.SyncOutcome originalOutcome = CARAOrderSyncService.syncFromStaging(
+            CARAOrderSyncService.capturePayload('00000530', JSON.serialize(buildPayload('00000530', false, email, 'cust-530-original')))
+        );
+        Assert.isTrue(originalOutcome.success, originalOutcome.message);
+        Id originalAccountId = [SELECT AccountId FROM Order WHERE Id = :originalOutcome.orderId].AccountId;
+
+        CARAOrderSyncService.SyncOutcome conflictOutcome = CARAOrderSyncService.syncFromStaging(
+            CARAOrderSyncService.capturePayload('00000531', JSON.serialize(buildPayload('00000531', false, email, 'cust-530-conflict')))
+        );
+        Assert.isTrue(conflictOutcome.success, conflictOutcome.message);
+        Id duplicateAccountId = [SELECT AccountId FROM Order WHERE Id = :conflictOutcome.orderId].AccountId;
+        Assert.areNotEqual(originalAccountId, duplicateAccountId);
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome repeatConflictOutcome = CARAOrderSyncService.syncFromStaging(
+            CARAOrderSyncService.capturePayload('00000532', JSON.serialize(buildPayload('00000532', false, email, 'cust-530-conflict')))
+        );
+        CARAOrderSyncService.SyncOutcome repeatOriginalOutcome = CARAOrderSyncService.syncFromStaging(
+            CARAOrderSyncService.capturePayload('00000533', JSON.serialize(buildPayload('00000533', false, email, 'cust-530-original')))
+        );
+        Test.stopTest();
+
+        Assert.isTrue(repeatConflictOutcome.success, repeatConflictOutcome.message);
+        Assert.isTrue(repeatOriginalOutcome.success, repeatOriginalOutcome.message);
+        Assert.areEqual(duplicateAccountId, [SELECT AccountId FROM Order WHERE Id = :repeatConflictOutcome.orderId].AccountId,
+            'A repeat order from the conflicting customerId must reuse its own Duplicate_Of__c Account.');
+        Assert.areEqual(originalAccountId, [SELECT AccountId FROM Order WHERE Id = :repeatOriginalOutcome.orderId].AccountId,
+            'A repeat order from the original customerId must reuse the original Account.');
+        Assert.areEqual(
+            2,
+            [SELECT COUNT() FROM Account WHERE Is_Guest__c = false AND Id IN (SELECT AccountId FROM Contact WHERE Email = :email)],
+            'No further duplicate Accounts may be created for either identity.'
+        );
+    }
+
+    // =========================================================
     // Guest and Registered identities are modeled as two separate
     // Accounts. A Guest Account is always reused across repeat guest
     // orders (keyed on email, since SFCC's guest customerId changes every
@@ -253,9 +331,9 @@ private class CARAOrderSyncServiceTest {
         Id guestAccountId = [SELECT AccountId FROM Order WHERE Id = :guestOutcome.orderId].AccountId;
         Assert.areNotEqual(registeredAccountId, guestAccountId, 'The guest order must use a separate Guest Account, not the Registered Account.');
 
-        Account guestAccount = [SELECT Is_Guest__c, ParentId FROM Account WHERE Id = :guestAccountId];
+        Account guestAccount = [SELECT Is_Guest__c, Registered_Account__c FROM Account WHERE Id = :guestAccountId];
         Assert.isTrue(guestAccount.Is_Guest__c);
-        Assert.areEqual(registeredAccountId, guestAccount.ParentId, 'The Guest Account must be linked under the Registered Account.');
+        Assert.areEqual(registeredAccountId, guestAccount.Registered_Account__c, 'The Guest Account must be linked under the Registered Account.');
 
         Account registeredAccount = [SELECT Is_Guest__c, External_ID__c FROM Account WHERE Id = :registeredAccountId];
         Assert.isFalse(registeredAccount.Is_Guest__c);
@@ -296,9 +374,9 @@ private class CARAOrderSyncServiceTest {
         CARAOrderSyncService.SyncOutcome firstOutcome = CARAOrderSyncService.syncFromStaging(firstStagingId);
         Assert.isTrue(firstOutcome.success, firstOutcome.message);
         Id firstGuestAccountId = [SELECT AccountId FROM Order WHERE Id = :firstOutcome.orderId].AccountId;
-        Account firstGuestAccount = [SELECT Is_Guest__c, ParentId FROM Account WHERE Id = :firstGuestAccountId];
+        Account firstGuestAccount = [SELECT Is_Guest__c, Registered_Account__c FROM Account WHERE Id = :firstGuestAccountId];
         Assert.isTrue(firstGuestAccount.Is_Guest__c);
-        Assert.isNull(firstGuestAccount.ParentId, 'No Registered parent exists yet, so the Guest Account must not be linked to one.');
+        Assert.isNull(firstGuestAccount.Registered_Account__c, 'No Registered parent exists yet, so the Guest Account must not be linked to one.');
 
         Map<String, Object> secondPayload = buildPayload('00000516', true, 'pure-guest@20three.digital', 'cust-516-session-b');
         Id secondStagingId = CARAOrderSyncService.capturePayload('00000516', JSON.serialize(secondPayload));
@@ -345,10 +423,10 @@ private class CARAOrderSyncServiceTest {
         Assert.areEqual('cust-517-registered', registeredAccount.External_ID__c);
         Assert.isNull(registeredAccount.Duplicate_Of__c, 'A first-time registered order must not be flagged as a conflicting duplicate.');
 
-        Account guestAccount = [SELECT Is_Guest__c, External_ID__c, ParentId FROM Account WHERE Id = :guestAccountId];
+        Account guestAccount = [SELECT Is_Guest__c, External_ID__c, Registered_Account__c FROM Account WHERE Id = :guestAccountId];
         Assert.isTrue(guestAccount.Is_Guest__c);
         Assert.areEqual('cust-517-guest-session', guestAccount.External_ID__c, 'The Guest Account\'s own identity must be untouched by the later registered order.');
-        Assert.areEqual(registeredAccountId, guestAccount.ParentId, 'The pre-existing Guest Account must be linked under the newly identified Registered Account.');
+        Assert.areEqual(registeredAccountId, guestAccount.Registered_Account__c, 'The pre-existing Guest Account must be linked under the newly identified Registered Account.');
 
         // A second, later registered order for the same person (same stable
         // customerId) must reuse the Registered Account, not spin off a new
@@ -482,6 +560,194 @@ private class CARAOrderSyncServiceTest {
         );
         Assert.isNull([SELECT Related_Order__c FROM Case WHERE Id = :firstCase.Id].Related_Order__c);
         Assert.isNull([SELECT Related_Order__c FROM Case WHERE Id = :secondCase.Id].Related_Order__c);
+    }
+
+    // =========================================================
+    // CPR Number exact match: CARADepositBasketQueueable now sends the CPR
+    // Number to SFCC on the deposit basket call, and SFCC is expected to
+    // echo it back as c_cprNumber — an exact key that takes priority over
+    // the c_depositAmount/c_quotedUnitPrice heuristic above.
+    // =========================================================
+    @IsTest
+    static void customOrderLinksCaseToOrderByExactCprNumberEvenWithoutMatchingDeposit() {
+        Id productId = [SELECT Id FROM Product2 WHERE ProductCode = :PRODUCT_CODE LIMIT 1].Id;
+        Account account = new Account(Name = 'Test Customer', Is_Guest__c = false, External_ID__c = 'cust-cpr-530');
+        insert account;
+        insert new Contact(AccountId = account.Id, LastName = 'Customer', Email = 'cpr-number-match@20three.digital', Is_Guest__c = false);
+        Case caseRecord = new Case(AccountId = account.Id);
+        insert caseRecord;
+        Custom_Product_Request__c requestRecord = new Custom_Product_Request__c(
+            Case__c = caseRecord.Id,
+            Product__c = productId,
+            Product_Name__c = 'CARA Sync Test Product',
+            Deposit_Amount__c = 100,
+            Selling_Price__c = 400,
+            Status__c = 'Approved',
+            Basket_Status__c = 'Created',
+            Quantity__c = 1
+        );
+        insert requestRecord;
+        // AutoNumber Name is only populated server-side — the in-memory
+        // sObject from insert does not carry it back, unlike Id.
+        String cprNumber = [SELECT Name FROM Custom_Product_Request__c WHERE Id = :requestRecord.Id].Name;
+
+        // Deliberately does NOT match on deposit/price (would be ambiguous
+        // or unmatched under the old heuristic alone) — the CPR Number is
+        // the sole key this must resolve on.
+        Map<String, Object> payload = addCprNumberField(
+            buildPayload('00000530', false, 'cpr-number-match@20three.digital', 'cust-cpr-530'),
+            cprNumber
+        );
+        Id stagingId = CARAOrderSyncService.capturePayload('00000530', JSON.serialize(payload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome outcome = CARAOrderSyncService.syncFromStaging(stagingId);
+        Test.stopTest();
+
+        Assert.isTrue(outcome.success, outcome.message);
+        Assert.areEqual(0, outcome.warnings.size(), 'An exact CPR Number match must not raise a warning.');
+        Case updatedCase = [SELECT Related_Order__c FROM Case WHERE Id = :caseRecord.Id];
+        Assert.areEqual(outcome.orderId, updatedCase.Related_Order__c, 'The CPR Number must link its Case to the new Order directly, with no ambiguity.');
+    }
+
+    @IsTest
+    static void customOrderWithUnknownCprNumberLeavesCaseUnlinkedAndWarnsWithoutFailingOrder() {
+        // Uses a pre-existing Account/Contact (as the other CPR tests above
+        // do) rather than a brand-new customerId/email, so this exercises
+        // only the CPR Number lookup, independent of new-Account creation.
+        Account account = new Account(Name = 'Test Customer', Is_Guest__c = false, External_ID__c = 'cust-cpr-531');
+        insert account;
+        insert new Contact(AccountId = account.Id, LastName = 'Customer', Email = 'cpr-number-unknown@20three.digital', Is_Guest__c = false);
+
+        Map<String, Object> payload = addCprNumberField(
+            buildPayload('00000531', false, 'cpr-number-unknown@20three.digital', 'cust-cpr-531'),
+            'CPR-99999'
+        );
+        Id stagingId = CARAOrderSyncService.capturePayload('00000531', JSON.serialize(payload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome outcome = CARAOrderSyncService.syncFromStaging(stagingId);
+        Test.stopTest();
+
+        Assert.isTrue(outcome.success, 'A CPR Number that cannot be resolved must not block the rest of Order creation: ' + outcome.message);
+        Assert.areEqual(1, outcome.warnings.size());
+        Assert.isTrue(
+            outcome.warnings[0].contains('does not match any Custom Product Request'),
+            'An unresolvable CPR Number must raise a warning instead of failing the order.'
+        );
+    }
+
+    // SFCC sends custom-product line items without price, only basePrice;
+    // OrderItem.UnitPrice must fall back to it instead of failing with
+    // FIELD_INTEGRITY_EXCEPTION ("Order Products must have a Unit Price").
+    @IsTest
+    static void depositPaidOrderIsMarkedPartiallyPaid() {
+        Map<String, Object> payload = buildPayload('00000560', false, 'part-paid@20three.digital', 'cust-560');
+        payload.put('paymentStatus', 'part_paid');
+        Id stagingId = CARAOrderSyncService.capturePayload('00000560', JSON.serialize(payload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome outcome = CARAOrderSyncService.syncFromStaging(stagingId);
+        Test.stopTest();
+
+        Assert.isTrue(outcome.success, outcome.message);
+        Order orderRecord = [SELECT Status, Payment_Status__c FROM Order WHERE Id = :outcome.orderId];
+        Assert.areEqual('Partially Paid', orderRecord.Status);
+        Assert.areEqual('part_paid', orderRecord.Payment_Status__c);
+    }
+
+    @IsTest
+    static void kycDepositPaidOrderStaysOnKycHoldInsteadOfPartiallyPaid() {
+        Map<String, Object> payload = buildPayload('00000561', false, 'part-paid-kyc@20three.digital', 'cust-561');
+        payload.put('paymentStatus', 'part_paid');
+        payload.put('orderTotal', 60000);
+        Id stagingId = CARAOrderSyncService.capturePayload('00000561', JSON.serialize(payload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome outcome = CARAOrderSyncService.syncFromStaging(stagingId);
+        Test.stopTest();
+
+        Assert.isTrue(outcome.success, outcome.message);
+        Order orderRecord = [SELECT Status FROM Order WHERE Id = :outcome.orderId];
+        Assert.areNotEqual('Partially Paid', orderRecord.Status);
+    }
+
+    @IsTest
+    static void fullyPaidOrderIsNotMarkedPartiallyPaid() {
+        Map<String, Object> payload = buildPayload('00000562', false, 'paid@20three.digital', 'cust-562');
+        payload.put('paymentStatus', 'paid');
+        Id stagingId = CARAOrderSyncService.capturePayload('00000562', JSON.serialize(payload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome outcome = CARAOrderSyncService.syncFromStaging(stagingId);
+        Test.stopTest();
+
+        Assert.isTrue(outcome.success, outcome.message);
+        Order orderRecord = [SELECT Status FROM Order WHERE Id = :outcome.orderId];
+        Assert.areEqual('Draft', orderRecord.Status);
+    }
+
+    @IsTest
+    static void lineItemWithoutPriceFallsBackToBasePrice() {
+        Map<String, Object> payload = buildPayload('00000540', false, 'no-price@20three.digital', 'cust-540');
+        Map<String, Object> item = (Map<String, Object>) ((List<Object>) payload.get('productItems'))[0];
+        item.remove('price');
+        Id stagingId = CARAOrderSyncService.capturePayload('00000540', JSON.serialize(payload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome outcome = CARAOrderSyncService.syncFromStaging(stagingId);
+        Test.stopTest();
+
+        Assert.isTrue(outcome.success, outcome.message);
+        OrderItem orderItem = [SELECT UnitPrice FROM OrderItem WHERE OrderId = :outcome.orderId LIMIT 1];
+        Assert.areEqual(100, orderItem.UnitPrice);
+    }
+
+    // N-Genius instruments send the amount only under paymentTransaction.
+    @IsTest
+    static void paymentInstrumentAmountFallsBackToPaymentTransaction() {
+        Map<String, Object> payload = buildPayload('00000542', false, 'ngenius-amount@20three.digital', 'cust-542');
+        payload.put('paymentInstruments', new List<Object>{
+            new Map<String, Object>{
+                'paymentInstrumentId' => 'pi-00000542',
+                'paymentMethodId' => 'NGENIUS',
+                'paymentCard' => new Map<String, Object>{ 'creditCardExpired' => false },
+                'paymentTransaction' => new Map<String, Object>{ 'amount' => 40, 'transactionId' => 'txn-542' }
+            }
+        });
+        Id stagingId = CARAOrderSyncService.capturePayload('00000542', JSON.serialize(payload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome outcome = CARAOrderSyncService.syncFromStaging(stagingId);
+        Test.stopTest();
+
+        Assert.isTrue(outcome.success, outcome.message);
+        Payment paymentRecord = [SELECT Amount FROM Payment WHERE Payment_Gateway_Token__c = 'pi-00000542'];
+        Assert.areEqual(40, paymentRecord.Amount);
+    }
+
+    @IsTest
+    static void lineItemWithoutAnyPriceFailsWithClearError() {
+        Map<String, Object> payload = buildPayload('00000541', false, 'no-price-at-all@20three.digital', 'cust-541');
+        Map<String, Object> item = (Map<String, Object>) ((List<Object>) payload.get('productItems'))[0];
+        item.remove('price');
+        item.remove('basePrice');
+        Id stagingId = CARAOrderSyncService.capturePayload('00000541', JSON.serialize(payload));
+
+        Test.startTest();
+        CARAOrderSyncService.SyncOutcome outcome = CARAOrderSyncService.syncFromStaging(stagingId);
+        Test.stopTest();
+
+        Assert.isFalse(outcome.success);
+        Assert.isFalse(outcome.message.contains('FIELD_INTEGRITY_EXCEPTION'), outcome.message);
+        Assert.isTrue(outcome.message.contains('price'), outcome.message);
+    }
+
+    private static Map<String, Object> addCprNumberField(Map<String, Object> payload, String cprNumber) {
+        List<Object> items = (List<Object>) payload.get('productItems');
+        Map<String, Object> item = (Map<String, Object>) items[0];
+        item.put('c_cprNumber', cprNumber);
+        return payload;
     }
 
     private static Map<String, Object> addCustomProductFields(Map<String, Object> payload, Decimal depositAmount, Decimal quotedUnitPrice) {

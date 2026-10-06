@@ -264,35 +264,10 @@ public without sharing class CustomiseRequestController {
             caseRecord.RecordTypeId = salesFollowUpRtId;
         }
 
-        Contact matchingContact = findContactByEmail(input.email.trim());
-        if (matchingContact != null) {
-            caseRecord.ContactId = matchingContact.Id;
-            if (matchingContact.AccountId != null) {
-                caseRecord.AccountId = matchingContact.AccountId;
-            }
-        }
-
+        // Contact/Account matching or creation from SuppliedEmail now
+        // happens org-wide in CaseCustomerMatchTrigger, so every Case
+        // creation channel (this wizard included) gets the same behavior.
         return caseRecord;
-    }
-
-    /*
-     * Attaches the Case to an existing Contact when exactly one Contact
-     * matches the submitted email — same lookup pattern CARACaseRestService
-     * already uses for the chat API. Left unset (not an error) when there's
-     * no match or the email is ambiguous across multiple Contacts, since
-     * this wizard must still work for brand-new customers with no Contact
-     * record yet.
-     */
-    private static Contact findContactByEmail(String emailAddress) {
-        List<Contact> matches = [
-            SELECT Id, AccountId
-            FROM Contact
-            WHERE Email = :emailAddress.toLowerCase()
-            WITH SYSTEM_MODE
-            ORDER BY CreatedDate ASC
-            LIMIT 2
-        ];
-        return matches.size() == 1 ? matches[0] : null;
     }
 
     private static String buildCaseDescription(CustomisationRequestInput input) {

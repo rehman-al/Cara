@@ -1,5 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <actionCalls>
+        <name>Validate_Request</name>
+        <label>Validate Request</label>
+        <locationX>300</locationX>
+        <locationY>400</locationY>
+        <actionName>CARADepositBasketPreflight</actionName>
+        <actionType>apex</actionType>
+        <connector>
+            <targetReference>Is_Request_Valid</targetReference>
+        </connector>
+        <faultConnector>
+            <targetReference>Failure_Screen</targetReference>
+        </faultConnector>
+        <flowTransactionModel>CurrentTransaction</flowTransactionModel>
+        <inputParameters>
+            <name>requestId</name>
+            <value>
+                <elementReference>Get_Request.Id</elementReference>
+            </value>
+        </inputParameters>
+        <nameSegment>CARADepositBasketPreflight</nameSegment>
+        <outputParameters>
+            <assignToReference>varIsValid</assignToReference>
+            <name>isValid</name>
+        </outputParameters>
+        <outputParameters>
+            <assignToReference>varMissingFields</assignToReference>
+            <name>missingFields</name>
+        </outputParameters>
+    </actionCalls>
     <apiVersion>61.0</apiVersion>
     <areMetricsLoggedToDataCloud>false</areMetricsLoggedToDataCloud>
     <decisions>
@@ -25,6 +55,31 @@
                 <targetReference>Already_Approved_Screen</targetReference>
             </connector>
             <label>Already Approved</label>
+        </rules>
+    </decisions>
+    <decisions>
+        <name>Is_Request_Valid</name>
+        <label>Is Request Valid?</label>
+        <locationX>300</locationX>
+        <locationY>425</locationY>
+        <defaultConnector>
+            <targetReference>Validation_Failed_Screen</targetReference>
+        </defaultConnector>
+        <defaultConnectorLabel>Missing Data</defaultConnectorLabel>
+        <rules>
+            <name>Valid</name>
+            <conditionLogic>and</conditionLogic>
+            <conditions>
+                <leftValueReference>varIsValid</leftValueReference>
+                <operator>EqualTo</operator>
+                <rightValue>
+                    <booleanValue>true</booleanValue>
+                </rightValue>
+            </conditions>
+            <connector>
+                <targetReference>Mark_Approved</targetReference>
+            </connector>
+            <label>Valid</label>
         </rules>
     </decisions>
     <description>Launched from the Custom Product Request &quot;Product Finalized (Quote Accepted)&quot; button. Marks the request Approved — the separate CPR_Approved_Create_Deposit_Basket record-triggered flow reacts to that status change and requests the N-Genius deposit payment link (Link 1).</description>
@@ -118,7 +173,7 @@
         <allowFinish>true</allowFinish>
         <allowPause>false</allowPause>
         <connector>
-            <targetReference>Mark_Approved</targetReference>
+            <targetReference>Validate_Request</targetReference>
         </connector>
         <fields>
             <name>Confirm_Message</name>
@@ -184,6 +239,30 @@
         <showFooter>true</showFooter>
         <showHeader>true</showHeader>
     </screens>
+    <screens>
+        <name>Validation_Failed_Screen</name>
+        <label>Validation Failed</label>
+        <locationX>500</locationX>
+        <locationY>450</locationY>
+        <allowBack>false</allowBack>
+        <allowFinish>true</allowFinish>
+        <allowPause>false</allowPause>
+        <fields>
+            <name>Validation_Failed_Message</name>
+            <fieldText>&lt;p&gt;&lt;strong style=&quot;color: rgb(194, 57, 52);&quot;&gt;Request not approved — status set to Failed.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot;color: rgb(194, 57, 52);&quot;&gt;The deposit payment link cannot be requested because the following is missing or invalid:&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;strong style=&quot;color: rgb(194, 57, 52);&quot;&gt;{!varMissingFields}&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot;color: rgb(194, 57, 52);&quot;&gt;Fix these (Selling Price, Product with SKU, and the Case Contact&apos;s Mailing Address with a valid country) and click the button again.&lt;/span&gt;&lt;/p&gt;</fieldText>
+            <fieldType>DisplayText</fieldType>
+            <styleProperties>
+                <verticalAlignment>
+                    <stringValue>top</stringValue>
+                </verticalAlignment>
+                <width>
+                    <stringValue>12</stringValue>
+                </width>
+            </styleProperties>
+        </fields>
+        <showFooter>true</showFooter>
+        <showHeader>true</showHeader>
+    </screens>
     <start>
         <locationX>50</locationX>
         <locationY>0</locationY>
@@ -197,6 +276,20 @@
         <dataType>String</dataType>
         <isCollection>false</isCollection>
         <isInput>true</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>varIsValid</name>
+        <dataType>Boolean</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
+        <isOutput>false</isOutput>
+    </variables>
+    <variables>
+        <name>varMissingFields</name>
+        <dataType>String</dataType>
+        <isCollection>false</isCollection>
+        <isInput>false</isInput>
         <isOutput>false</isOutput>
     </variables>
 </Flow>

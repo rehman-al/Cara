@@ -8,6 +8,8 @@
  */
 public with sharing class CARAOrderSyncService {
     private static final String ORDER_STATUS_DRAFT = 'Draft';
+    private static final String ORDER_STATUS_PARTIALLY_PAID = 'Partially Paid';
+    private static final String SFCC_PAYMENT_STATUS_PART_PAID = 'part_paid';
     private static final String PAYMENT_STATUS_PENDING = 'Pending';
     private static final String PAYMENT_TYPE_SALE = 'Sale';
     private static final String PROCESSING_MODE_EXTERNAL = 'External';
@@ -359,15 +361,18 @@ public with sharing class CARAOrderSyncService {
      * on customerInfo.email (required for every order) rather than the
      * guest's per-session customerId, which SFCC does not keep stable
      * across guest checkouts. When both a Registered and a Guest Account
-     * exist for the same email, the Guest Account's standard ParentId
+     * exist for the same email, the Guest Account's Registered_Account__c
      * points at the Registered Account — the Registered Account itself is
-     * never written to by a guest order.
+     * never written to by a guest order. (Not standard ParentId: Salesforce
+     * disallows a person Account as the target of another Account's
+     * ParentId, and the Registered Account is always a person Account.)
      */
     private static CustomerContext syncCustomer(CARAOrderPayload payload) {
         String emailAddress = payload.customerInfo.email.trim().toLowerCase();
 
         List<Contact> matchingContacts = [
-            SELECT Id, AccountId, Email, Account.Is_Guest__c, Account.External_ID__c, Account.ParentId
+            SELECT Id, AccountId, Email, Account.Is_Guest__c, Account.External_ID__c, Account.Registered_Account__c,
+                Account.Duplicate_Of__c
             FROM Contact
             WHERE Email = :emailAddress
             ORDER BY CreatedDate ASC
@@ -375,6 +380,7 @@ public with sharing class CARAOrderSyncService {
 
         Contact registeredContact;
         Contact guestContact;
+        List<Contact> registeredContacts = new List<Contact>();
         for (Contact existingContact : matchingContacts) {
             if (existingContact.AccountId == null) {
                 continue;
@@ -385,12 +391,10 @@ public with sharing class CARAOrderSyncService {
                 }
                 guestContact = existingContact;
             } else {
-                if (registeredContact != null) {
-                    throw new IntegrationException('Multiple registered accounts use customer email ' + emailAddress + '.');
-                }
-                registeredContact = existingContact;
+                registeredContacts.add(existingContact);
             }
         }
+        registeredContact = selectRegisteredContact(registeredContacts, payload.customerInfo.customerId);
 
         return payload.guest == true
             ? syncGuestCustomer(payload, registeredContact, guestContact)
@@ -398,12 +402,41 @@ public with sharing class CARAOrderSyncService {
     }
 
     /**
+     * More than one Registered Account can legitimately share an email: a
+     * customerId conflict (see syncRegisteredCustomer()) creates a separate
+     * Account linked back via Duplicate_Of__c. Later orders for that email
+     * must still resolve to a single Account rather than fail, so prefer the
+     * Account already tied to this order's SFCC customerId, and otherwise
+     * fall back to the original (non-Duplicate_Of__c, oldest) Account — the
+     * normal conflict handling then applies against it. registeredContacts
+     * is expected in CreatedDate ASC order.
+     */
+    private static Contact selectRegisteredContact(List<Contact> registeredContacts, String customerId) {
+        if (registeredContacts.isEmpty()) {
+            return null;
+        }
+        if (!String.isBlank(customerId)) {
+            for (Contact candidate : registeredContacts) {
+                if (candidate.Account.External_ID__c == customerId) {
+                    return candidate;
+                }
+            }
+        }
+        for (Contact candidate : registeredContacts) {
+            if (candidate.Account.Duplicate_Of__c == null) {
+                return candidate;
+            }
+        }
+        return registeredContacts[0];
+    }
+
+    /**
      * Registered-order path: matches/creates the Registered Account only
      * (Is_Guest__c = false), using the same customerId-conflict ->
      * Duplicate_Of__c handling as before. If a Guest Account already exists
      * for this email, it is linked under the resolved Registered Account via
-     * ParentId (the Guest → Registered transition) but is otherwise left
-     * untouched — unless a customerId conflict was detected, in which case
+     * Registered_Account__c (the Guest → Registered transition) but is
+     * otherwise left untouched — unless a customerId conflict was detected, in which case
      * linking which identity is real is left to Ops rather than guessed.
      */
     private static CustomerContext syncRegisteredCustomer(
@@ -472,11 +505,17 @@ public with sharing class CARAOrderSyncService {
             // block; this is an intentional, tracked duplicate (see
             // Duplicate_Of__c above), so allow the save through.
             insertAllowingDuplicates(accountRecord);
+            accountRecord = requeryWithPersonContactId(accountRecord.Id);
         } else {
             update accountRecord;
         }
 
-        Contact contactRecord = upsertContact(registeredContact, accountRecord.Id, payload, false);
+        Contact contactRecord = upsertContact(
+            registeredContact,
+            isNewAccount ? accountRecord.PersonContactId : null,
+            payload,
+            false
+        );
 
         // A Guest Account already existed for this email before the
         // customer registered — link it under the Registered Account so the
@@ -486,9 +525,9 @@ public with sharing class CARAOrderSyncService {
         if (
             guestContact != null &&
             duplicateOfAccountId == null &&
-            guestContact.Account.ParentId != accountRecord.Id
+            guestContact.Account.Registered_Account__c != accountRecord.Id
         ) {
-            update new Account(Id = guestContact.AccountId, ParentId = accountRecord.Id);
+            update new Account(Id = guestContact.AccountId, Registered_Account__c = accountRecord.Id);
         }
 
         CustomerContext context = new CustomerContext();
@@ -514,9 +553,9 @@ public with sharing class CARAOrderSyncService {
             accountRecord = new Account();
             if (registeredContact != null) {
                 // A Registered parent already exists for this email — the
-                // new Guest Account is subordinate to it via the standard
-                // Account hierarchy and never replaces or modifies it.
-                accountRecord.ParentId = registeredContact.AccountId;
+                // new Guest Account is linked to it via Registered_Account__c
+                // and never replaces or modifies it.
+                accountRecord.Registered_Account__c = registeredContact.AccountId;
             }
         } else {
             accountRecord = new Account(Id = guestContact.AccountId);
@@ -524,11 +563,17 @@ public with sharing class CARAOrderSyncService {
         applyAccountValues(accountRecord, payload, isNewAccount, true);
         if (isNewAccount) {
             insertAllowingDuplicates(accountRecord);
+            accountRecord = requeryWithPersonContactId(accountRecord.Id);
         } else {
             update accountRecord;
         }
 
-        Contact contactRecord = upsertContact(guestContact, accountRecord.Id, payload, true);
+        Contact contactRecord = upsertContact(
+            guestContact,
+            isNewAccount ? accountRecord.PersonContactId : null,
+            payload,
+            true
+        );
 
         CustomerContext context = new CustomerContext();
         context.accountRecord = accountRecord;
@@ -536,38 +581,59 @@ public with sharing class CARAOrderSyncService {
         return context;
     }
 
+    /**
+     * personContactIdForNewAccount is the just-inserted person Account's
+     * auto-created Contact Id (see requeryWithPersonContactId), passed only
+     * when existingContact is null. A person Account IS the Contact, so
+     * there is never a separate Contact insert here — only ever an update
+     * against either that auto-created Contact or a previously existing
+     * one.
+     */
     private static Contact upsertContact(
         Contact existingContact,
-        Id accountId,
+        Id personContactIdForNewAccount,
         CARAOrderPayload payload,
         Boolean isGuestAccount
     ) {
-        Boolean isNewContact = existingContact == null;
-        Contact contactRecord;
-        if (isNewContact) {
-            contactRecord = new Contact();
-        } else {
-            // AccountId is only writable on insert; for a Contact that is the
-            // Person Account's own 1:1 contact, it is auto-managed and becomes
-            // read-only after creation, so re-querying it with AccountId still
-            // populated (even unchanged) and sending it back on update throws
-            // INVALID_FIELD_FOR_INSERT_UPDATE. Use a bare sObject so only the
-            // fields applyContactValues() actually sets go out on update.
-            contactRecord = new Contact(Id = existingContact.Id);
-        }
-        applyContactValues(contactRecord, accountId, payload, isNewContact, isGuestAccount);
-        if (isNewContact) {
-            insertAllowingDuplicates(contactRecord);
-        } else {
-            update contactRecord;
-        }
+        // AccountId is only writable on insert; for a Contact that is the
+        // Person Account's own 1:1 contact, it is auto-managed and becomes
+        // read-only after creation, so re-querying it with AccountId still
+        // populated (even unchanged) and sending it back on update throws
+        // INVALID_FIELD_FOR_INSERT_UPDATE. Use a bare sObject so only the
+        // fields applyContactValues() actually sets go out on update.
+        Contact contactRecord = new Contact(
+            Id = existingContact == null ? personContactIdForNewAccount : existingContact.Id
+        );
+        applyContactValues(contactRecord, payload, isGuestAccount);
+        update contactRecord;
         return contactRecord;
+    }
+
+    private static Account requeryWithPersonContactId(Id accountId) {
+        return [
+            SELECT Id, External_ID__c, Is_Guest__c, Registered_Account__c, Duplicate_Of__c, PersonContactId
+            FROM Account
+            WHERE Id = :accountId
+            LIMIT 1
+        ];
     }
 
     private static void insertAllowingDuplicates(SObject record) {
         Database.DMLOptions dmlOptions = new Database.DMLOptions();
         dmlOptions.DuplicateRuleHeader.allowSave = true;
-        Database.insert(record, dmlOptions);
+        Database.SaveResult saveResult = Database.insert(record, dmlOptions);
+        if (!saveResult.isSuccess()) {
+            List<String> errorDetails = new List<String>();
+            for (Database.Error saveError : saveResult.getErrors()) {
+                String fieldDetail = saveError.getFields().isEmpty()
+                    ? ''
+                    : ' [fields: ' + String.join(saveError.getFields(), ', ') + ']';
+                errorDetails.add(saveError.getStatusCode() + ': ' + saveError.getMessage() + fieldDetail);
+            }
+            throw new IntegrationException(
+                'Failed to insert ' + record.getSObjectType() + ': ' + String.join(errorDetails, '; ')
+            );
+        }
     }
 
     private static void applyAccountValues(
@@ -577,16 +643,21 @@ public with sharing class CARAOrderSyncService {
         Boolean isGuestAccount
     ) {
         if (isNewAccount) {
-            // Name is only writable on insert; on Person Accounts it becomes a
-            // read-only compound field (derived from FirstName/LastName) after
-            // creation, so updating it on an existing Account throws
-            // INVALID_FIELD_FOR_INSERT_UPDATE.
+            // FirstName/LastName (not Name, which on a Person Account is a
+            // read-only compound field derived from them) are required at
+            // insert and get overwritten immediately after by the
+            // upsertContact() update below using its own name fallback —
+            // this is just the placeholder that satisfies the required-
+            // LastName constraint at insert time.
             String customerName = firstNonBlank(
                 payload.customerInfo == null ? null : payload.customerInfo.customerName,
                 payload.customerName,
                 payload.customerInfo.email
             );
-            accountRecord.Name = customerName;
+            List<String> nameParts = splitName(customerName);
+            accountRecord.RecordTypeId = CARAPersonAccountUtil.getRecordTypeId();
+            accountRecord.FirstName = nameParts[0];
+            accountRecord.LastName = nameParts[1];
             // Is_Guest__c is the Account's classification and is set once,
             // at creation, and never flipped on an existing Account —
             // Registered and Guest Accounts for the same person are always
@@ -607,17 +678,12 @@ public with sharing class CARAOrderSyncService {
 
     private static void applyContactValues(
         Contact contactRecord,
-        Id accountId,
         CARAOrderPayload payload,
-        Boolean isNewContact,
         Boolean isGuestAccount
     ) {
         String customerName = firstNonBlank(payload.customerInfo.customerName, payload.customerName, 'Customer');
         List<String> nameParts = splitName(customerName);
 
-        if (isNewContact) {
-            contactRecord.AccountId = accountId;
-        }
         contactRecord.FirstName = nameParts[0];
         contactRecord.LastName = nameParts[1];
         contactRecord.Email = payload.customerInfo.email.trim().toLowerCase();
@@ -649,6 +715,19 @@ public with sharing class CARAOrderSyncService {
         Boolean isNewOrder = matchingOrders.isEmpty();
         Order orderRecord = isNewOrder ? new Order() : matchingOrders[0];
         String targetStatus = mapOrderStatus(payload.status);
+
+        // A split-payment order whose deposit is paid (SFCC paymentStatus
+        // part_paid) is surfaced as "Partially Paid" (a Draft-category
+        // status, so it can still be edited and later activated). KYC orders
+        // are left as Draft so KYC_Hold_High_Value_Orders still moves them to
+        // On Hold — the compliance hold takes precedence.
+        if (
+            targetStatus == ORDER_STATUS_DRAFT &&
+            SFCC_PAYMENT_STATUS_PART_PAID.equalsIgnoreCase(payload.paymentStatus?.trim()) &&
+            !isKycRequired(payload)
+        ) {
+            targetStatus = ORDER_STATUS_PARTIALLY_PAID;
+        }
 
         if (!isNewOrder && orderRecord.Status == 'Activated' && targetStatus != 'Activated') {
             throw new IntegrationException('Activated Order ' + payload.orderNo + ' cannot be returned to Draft.');
@@ -818,7 +897,14 @@ public with sharing class CARAOrderSyncService {
             }
 
             orderItemRecord.Quantity = payloadItem.quantity;
-            orderItemRecord.UnitPrice = payloadItem.price;
+            // SFCC omits price on some line items (e.g. custom-product lines),
+            // sending only basePrice — fall back to it, mirroring the list
+            // price resolution in ensurePricebookEntries().
+            Decimal unitPrice = payloadItem.price == null ? payloadItem.basePrice : payloadItem.price;
+            if (unitPrice == null) {
+                throw new IntegrationException('Product item ' + payloadItem.itemId + ' requires price or basePrice.');
+            }
+            orderItemRecord.UnitPrice = unitPrice;
             orderItemRecord.Storefront_Product_Name__c = payloadItem.productName;
             orderItemRecord.Price_After_Item_Discount__c = payloadItem.priceAfterItemDiscount;
             orderItemRecord.Price_After_Order_Discount__c = payloadItem.priceAfterOrderDiscount;
@@ -867,16 +953,25 @@ public with sharing class CARAOrderSyncService {
     /**
      * Links a custom (bespoke) order's Case back to the Order so the
      * "Product is Ready" flows (which read Case.Related_Order__c) no longer
-     * need that link set by hand. SFCC does not echo the Basket_Id__c,
-     * CPR number, or Case number on the order, so there is no exact key —
-     * a custom line item is instead recognized by carrying c_depositAmount
-     * and/or c_quotedUnitPrice, and is matched to the one open (Approved,
-     * basket Created, not yet linked) Custom Product Request for that
-     * Account/Product whose Deposit_Amount__c/Selling_Price__c agree. If
-     * zero or more than one Custom Product Request match, this deliberately
-     * leaves Case.Related_Order__c unset and raises a warning rather than
-     * guessing — the same reconciliation pattern used for a customerId
-     * conflict in syncRegisteredCustomer().
+     * need that link set by hand.
+     *
+     * Exact key: when the deposit basket was created, CARADepositBasketQueueable
+     * now sends the CPR Number (Custom_Product_Request__c.Name) to SFCC as
+     * cprNumber, and SFCC echoes it back on the matching line item as
+     * c_cprNumber — a direct, unambiguous lookup. A custom item that carries
+     * it is linked (or, if it doesn't resolve to a Custom Product Request,
+     * warned about) purely on that key, with no further status filtering,
+     * since the number is already authoritative.
+     *
+     * Fallback heuristic: an item with no c_cprNumber (orders synced before
+     * this change, or any gap in SFCC's echo) falls back to the original
+     * recognition — carrying c_depositAmount and/or c_quotedUnitPrice,
+     * matched to the one open (Approved, basket Created, not yet linked)
+     * Custom Product Request for that Account/Product whose Deposit_Amount__c/
+     * Selling_Price__c agree. Zero or multiple matches, on either path,
+     * deliberately leave Case.Related_Order__c unset and raise a warning
+     * rather than guessing — the same reconciliation pattern used for a
+     * customerId conflict in syncRegisteredCustomer().
      */
     private static void linkCustomProductRequests(
         CARAOrderPayload payload,
@@ -889,23 +984,100 @@ public with sharing class CARAOrderSyncService {
             return;
         }
 
-        List<CARAOrderPayload.ProductItem> customItems = new List<CARAOrderPayload.ProductItem>();
-        Set<Id> productIds = new Set<Id>();
+        List<CARAOrderPayload.ProductItem> heuristicItems = new List<CARAOrderPayload.ProductItem>();
+        Set<Id> heuristicProductIds = new Set<Id>();
+        Set<String> cprNumbers = new Set<String>();
         for (CARAOrderPayload.ProductItem item : payload.productItems) {
-            if (item.c_depositAmount == null && item.c_quotedUnitPrice == null) {
+            if (
+                item.c_depositAmount == null &&
+                item.c_quotedUnitPrice == null &&
+                String.isBlank(item.c_cprNumber)
+            ) {
                 continue;
             }
-            Product2 productRecord = catalog.productByCode.get(item.productId);
-            if (productRecord == null) {
+            if (catalog.productByCode.get(item.productId) == null) {
                 continue;
             }
-            customItems.add(item);
-            productIds.add(productRecord.Id);
-        }
-        if (customItems.isEmpty()) {
-            return;
+            if (String.isNotBlank(item.c_cprNumber)) {
+                cprNumbers.add(item.c_cprNumber.trim());
+            } else {
+                heuristicItems.add(item);
+                heuristicProductIds.add(catalog.productByCode.get(item.productId).Id);
+            }
         }
 
+        Map<Id, Id> orderIdByCaseId = new Map<Id, Id>();
+
+        if (!cprNumbers.isEmpty()) {
+            linkByCprNumber(payload, orderRecord.Id, accountId, cprNumbers, orderIdByCaseId, warnings);
+        }
+        if (!heuristicItems.isEmpty()) {
+            linkByDepositHeuristic(
+                payload,
+                orderRecord.Id,
+                accountId,
+                heuristicItems,
+                heuristicProductIds,
+                catalog,
+                orderIdByCaseId,
+                warnings
+            );
+        }
+
+        if (!orderIdByCaseId.isEmpty()) {
+            List<Case> casesToUpdate = new List<Case>();
+            for (Id caseId : orderIdByCaseId.keySet()) {
+                casesToUpdate.add(new Case(Id = caseId, Related_Order__c = orderIdByCaseId.get(caseId)));
+            }
+            update casesToUpdate;
+        }
+    }
+
+    private static void linkByCprNumber(
+        CARAOrderPayload payload,
+        Id orderId,
+        Id accountId,
+        Set<String> cprNumbers,
+        Map<Id, Id> orderIdByCaseId,
+        Set<String> warnings
+    ) {
+        Map<String, Custom_Product_Request__c> cprByNumber = new Map<String, Custom_Product_Request__c>();
+        for (Custom_Product_Request__c cprRecord : [
+            SELECT Id, Name, Case__c, Case__r.AccountId
+            FROM Custom_Product_Request__c
+            WHERE Name IN :cprNumbers
+        ]) {
+            cprByNumber.put(cprRecord.Name, cprRecord);
+        }
+
+        for (String cprNumber : cprNumbers) {
+            Custom_Product_Request__c cprRecord = cprByNumber.get(cprNumber);
+            if (cprRecord == null) {
+                warnings.add(
+                    'CPR Number ' + cprNumber + ' on order ' + payload.orderNo +
+                    ' does not match any Custom Product Request; Case.Related_Order__c must be set manually.'
+                );
+            } else if (cprRecord.Case__r.AccountId != accountId) {
+                warnings.add(
+                    'CPR Number ' + cprNumber + ' on order ' + payload.orderNo +
+                    ' belongs to a Custom Product Request under a different Account; Case.Related_Order__c must be set manually.'
+                );
+            } else {
+                orderIdByCaseId.put(cprRecord.Case__c, orderId);
+            }
+        }
+    }
+
+    private static void linkByDepositHeuristic(
+        CARAOrderPayload payload,
+        Id orderId,
+        Id accountId,
+        List<CARAOrderPayload.ProductItem> heuristicItems,
+        Set<Id> productIds,
+        CatalogContext catalog,
+        Map<Id, Id> orderIdByCaseId,
+        Set<String> warnings
+    ) {
         Map<Id, List<Custom_Product_Request__c>> openRequestsByProductId = new Map<Id, List<Custom_Product_Request__c>>();
         for (Custom_Product_Request__c cprRecord : [
             SELECT Id, Product__c, Deposit_Amount__c, Selling_Price__c, Case__c
@@ -924,8 +1096,7 @@ public with sharing class CARAOrderSyncService {
             candidatesForProduct.add(cprRecord);
         }
 
-        Map<Id, Id> orderIdByCaseId = new Map<Id, Id>();
-        for (CARAOrderPayload.ProductItem item : customItems) {
+        for (CARAOrderPayload.ProductItem item : heuristicItems) {
             Id productId = catalog.productByCode.get(item.productId).Id;
             List<Custom_Product_Request__c> candidates = openRequestsByProductId.get(productId);
             if (candidates == null || candidates.isEmpty()) {
@@ -956,16 +1127,8 @@ public with sharing class CARAOrderSyncService {
                     '; Case.Related_Order__c must be set manually to avoid linking the wrong one.'
                 );
             } else {
-                orderIdByCaseId.put(matches[0].Case__c, orderRecord.Id);
+                orderIdByCaseId.put(matches[0].Case__c, orderId);
             }
-        }
-
-        if (!orderIdByCaseId.isEmpty()) {
-            List<Case> casesToUpdate = new List<Case>();
-            for (Id caseId : orderIdByCaseId.keySet()) {
-                casesToUpdate.add(new Case(Id = caseId, Related_Order__c = orderIdByCaseId.get(caseId)));
-            }
-            update casesToUpdate;
         }
     }
 
@@ -1051,6 +1214,11 @@ public with sharing class CARAOrderSyncService {
         for (CARAOrderPayload.PaymentInstrument instrument : payload.paymentInstruments) {
             if (instrument == null || String.isBlank(instrument.paymentInstrumentId)) {
                 throw new IntegrationException('Each paymentInstruments entry requires paymentInstrumentId.');
+            }
+            // N-Genius instruments carry the captured amount only on
+            // paymentTransaction, not at the instrument's top level.
+            if (instrument.amount == null && instrument.paymentTransaction != null) {
+                instrument.amount = instrument.paymentTransaction.amount;
             }
             if (instrument.amount == null) {
                 throw new IntegrationException('Payment instrument ' + instrument.paymentInstrumentId + ' requires amount.');
@@ -1239,11 +1407,18 @@ public with sharing class CARAOrderSyncService {
         return String.isBlank(sourceValue) ? Datetime.now() : parseDatetime(sourceValue, 'creationDate');
     }
 
+    // Account and Contact FirstName/LastName share these standard Salesforce
+    // limits; a name longer than this (e.g. a customer's full name entered
+    // into a single field in SFCC) would otherwise fail the insert with
+    // STRING_TOO_LONG.
+    private static final Integer FIRST_NAME_MAX_LENGTH = 40;
+    private static final Integer LAST_NAME_MAX_LENGTH = 80;
+
     private static List<String> splitName(String fullName) {
         String normalizedName = String.isBlank(fullName) ? 'Customer' : fullName.trim();
         Integer firstSpace = normalizedName.indexOf(' ');
         if (firstSpace <= 0) {
-            return new List<String>{ null, normalizedName };
+            return new List<String>{ null, truncate(normalizedName, LAST_NAME_MAX_LENGTH) };
         }
         String firstName = normalizedName.substring(0, firstSpace).trim();
         String lastName = normalizedName.substring(firstSpace + 1).trim();
@@ -1251,7 +1426,14 @@ public with sharing class CARAOrderSyncService {
             lastName = firstName;
             firstName = null;
         }
-        return new List<String>{ firstName, lastName };
+        return new List<String>{
+            firstName == null ? null : truncate(firstName, FIRST_NAME_MAX_LENGTH),
+            truncate(lastName, LAST_NAME_MAX_LENGTH)
+        };
+    }
+
+    private static String truncate(String value, Integer maxLength) {
+        return value.length() > maxLength ? value.substring(0, maxLength) : value;
     }
 
     private static String formatAddressName(CARAOrderPayload.Address addressRecord) {

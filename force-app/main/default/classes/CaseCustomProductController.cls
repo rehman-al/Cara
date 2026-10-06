@@ -47,6 +47,7 @@ public with sharing class CaseCustomProductController {
                     Product__r.Name,
                     Size__c,
                     Metal__c,
+                    Stone_Type__c,
                     Diamond_Carat__c,
                     Diamond_Shape__c,
                     Diamond_Type__c,
@@ -129,6 +130,9 @@ public with sharing class CaseCustomProductController {
 
             recordToInsert.Metal__c =
                 requestRecord.Metal__c;
+
+            recordToInsert.Stone_Type__c =
+                requestRecord.Stone_Type__c;
 
             recordToInsert.Diamond_Carat__c =
                 requestRecord.Diamond_Carat__c;
@@ -280,6 +284,9 @@ public with sharing class CaseCustomProductController {
 
             recordToUpdate.Metal__c =
                 requestRecord.Metal__c;
+
+            recordToUpdate.Stone_Type__c =
+                requestRecord.Stone_Type__c;
 
             recordToUpdate.Diamond_Carat__c =
                 requestRecord.Diamond_Carat__c;
@@ -563,6 +570,7 @@ public with sharing class CaseCustomProductController {
                     Product__r.Name,
                     Size__c,
                     Metal__c,
+                    Stone_Type__c,
                     Diamond_Carat__c,
                     Diamond_Shape__c,
                     Diamond_Type__c,

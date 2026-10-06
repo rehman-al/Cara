@@ -16,6 +16,6 @@
     </values>
     <values>
         <field>Storefront_Base_URI__c</field>
-        <value xsi:type="xsd:string">https://sfccdev.carajewellers.com/en-ae</value>
+        <value xsi:type="xsd:string">https://sfccstg.carajewellers.com/en-ae</value>
     </values>
 </CustomMetadata>

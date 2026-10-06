@@ -53,6 +53,10 @@ public with sharing class CARASfscSplitPaymentService {
         public Decimal price;
         public Decimal deposit;
         public ShippingAddress shippingAddress;
+        // Custom_Product_Request__c.Name (e.g. "CPR-00042") — the CPR
+        // Number SFCC must echo back on the resulting Order so Salesforce
+        // can link it without guessing (see CARAOrderSyncService).
+        public String cprNumber;
     }
 
     public class DepositBasketResult extends BaseResult {
@@ -93,7 +97,8 @@ public with sharing class CARASfscSplitPaymentService {
             'sku' => requestData.sku,
             'price' => requestData.price,
             'deposit' => requestData.deposit,
-            'shippingAddress' => shippingAddressPayload
+            'shippingAddress' => shippingAddressPayload,
+            'cprNumber' => requestData.cprNumber
         };
 
         CARASfscOrderOpsService.SfscResponse response = callOutWithRetry(DEPOSIT_BASKET_PATH, payload);
@@ -189,6 +194,16 @@ public with sharing class CARASfscSplitPaymentService {
     }
 
 
+    /*
+     * SFCC/MRT's OCAPI customer login is rate-limited to once per
+     * customerLogin every 3 seconds ("Tenant id ... has already performed
+     * a login operation ... in the last 3 seconds"). Retrying immediately
+     * re-triggers that same login for the same customer and collides with
+     * it, so every retry must wait out the window first — otherwise the
+     * retry is guaranteed to fail the same way and just burns the attempt.
+     */
+    private static final Integer OCAPI_LOGIN_BACKOFF_MILLIS = 3500;
+
     private static CARASfscOrderOpsService.SfscResponse callOutWithRetry(String path, Map<String, Object> payload) {
         CARASfscOrderOpsService.SfscResponse response;
         Exception lastCalloutError;
@@ -211,6 +226,8 @@ public with sharing class CARASfscSplitPaymentService {
             if (!isRetryableFailure || attempt == maxAttempts) {
                 break;
             }
+
+            waitOutOcapiLoginWindow();
         }
 
         if (response == null) {
@@ -224,6 +241,19 @@ public with sharing class CARASfscSplitPaymentService {
         }
 
         return response;
+    }
+
+
+    /*
+     * Apex has no sleep/delay API — this busy-waits on wall-clock time.
+     * Only reached on a retryable failure, at most (maxAttempts - 1)
+     * times per callout, so the added CPU time stays well within the
+     * governor limit even in the synchronous-Apex paths that call this.
+     */
+    private static void waitOutOcapiLoginWindow() {
+        Long deadline = System.currentTimeMillis() + OCAPI_LOGIN_BACKOFF_MILLIS;
+        while (System.currentTimeMillis() < deadline) {
+        }
     }
 
 

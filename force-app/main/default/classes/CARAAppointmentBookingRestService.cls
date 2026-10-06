@@ -270,24 +270,50 @@ global with sharing class CARAAppointmentBookingRestService {
             }
 
             Boolean isNewAccount = customerAccount == null;
+            Boolean isNewContact = customerContact == null;
 
             if (isNewAccount) {
 
+                List<String> nameParts = splitName(payload.fullName);
+                String trimmedPhone = String.isBlank(payload.phone)
+                    ? null
+                    : payload.phone.trim();
+
+                // A person Account IS the Contact (FirstName/LastName/
+                // PersonEmail live on the Account itself) - inserting it
+                // alone auto-creates the underlying Contact, so no separate
+                // Contact insert happens below for this case.
                 customerAccount = new Account(
-                    Name = payload.fullName.trim(),
+                    RecordTypeId = CARAPersonAccountUtil.getRecordTypeId(),
+                    FirstName = nameParts[0],
+                    LastName = nameParts[1],
                     Email__c = normalizedEmail,
-                    Phone = String.isBlank(payload.phone)
-                        ? null
-                        : payload.phone.trim()
+                    PersonEmail = normalizedEmail,
+                    Phone = trimmedPhone
                 );
 
                 insertBypassingNameDuplicateRules(customerAccount);
+                customerAccount = [
+                    SELECT Id, Name, Email__c, Phone, PersonContactId
+                    FROM Account
+                    WHERE Id = :customerAccount.Id
+                    LIMIT 1
+                ];
+
+                if (isNewContact) {
+                    customerContact = [
+                        SELECT Id, AccountId, Email, FirstName
+                        FROM Contact
+                        WHERE Id = :customerAccount.PersonContactId
+                        LIMIT 1
+                    ];
+                }
             }
 
-            Boolean isNewContact = customerContact == null;
-
-            if (isNewContact) {
-
+            if (isNewContact && !isNewAccount) {
+                // Matched an existing Account (via the legacy Email__c
+                // fallback above) that has no linked Contact yet - add one
+                // under it, same as pre-Person-Account behavior.
                 List<String> nameParts = splitName(payload.fullName);
 
                 customerContact = new Contact(

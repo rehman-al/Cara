@@ -42,12 +42,44 @@ private class CustomiseRequestControllerTest {
         System.assertNotEquals(null, result.caseNumber, 'Expected a Case number to be returned.');
         System.assertEquals(false, result.fileAttached, 'No file was submitted.');
 
-        Case createdCase = [SELECT Id, Subject, Origin, SuppliedEmail FROM Case LIMIT 1];
+        Case createdCase = [
+            SELECT Id, Subject, Origin, SuppliedEmail, Type, RecordType.DeveloperName, ContactId, AccountId
+            FROM Case
+            LIMIT 1
+        ];
         System.assertEquals('Web', createdCase.Origin);
         System.assertEquals('jane.doe@example.com', createdCase.SuppliedEmail);
+        System.assertEquals('Customized product', createdCase.Type, 'Case Type should be set for the custom product LWC visibility rule.');
+        System.assertEquals('Sales_Follow_up', createdCase.RecordType.DeveloperName, 'Case should use the Sales Follow-up record type.');
+        System.assertNotEquals(null, createdCase.ContactId, 'No Contact matched this email, so CaseCustomerMatchTrigger should have created one.');
+        System.assertNotEquals(null, createdCase.AccountId, 'The newly created Contact\'s Account should be attached too.');
+
+        Contact createdContact = [SELECT Email FROM Contact WHERE Id = :createdCase.ContactId];
+        System.assertEquals('jane.doe@example.com', createdContact.Email, 'New Contact should carry the Case\'s supplied email.');
 
         Custom_Product_Request__c request = [SELECT Id, Case__c FROM Custom_Product_Request__c LIMIT 1];
         System.assertEquals(createdCase.Id, request.Case__c);
+    }
+
+    @isTest
+    static void testSubmitAttachesMatchingContactAndAccount() {
+        Account existingAccount = new Account(Name = 'Doe Household');
+        Database.insert(existingAccount, AccessLevel.SYSTEM_MODE);
+        Contact existingContact = new Contact(
+            FirstName = 'Jane',
+            LastName = 'Doe',
+            Email = 'jane.doe@example.com',
+            AccountId = existingAccount.Id
+        );
+        Database.insert(existingContact, AccessLevel.SYSTEM_MODE);
+
+        Test.startTest();
+        CustomiseRequestController.submitCustomisationRequestV2(JSON.serialize(baseInput()));
+        Test.stopTest();
+
+        Case createdCase = [SELECT Id, ContactId, AccountId FROM Case LIMIT 1];
+        System.assertEquals(existingContact.Id, createdCase.ContactId, 'Case should be attached to the matching Contact.');
+        System.assertEquals(existingAccount.Id, createdCase.AccountId, 'Case should inherit the Contact\'s Account.');
     }
 
     @isTest

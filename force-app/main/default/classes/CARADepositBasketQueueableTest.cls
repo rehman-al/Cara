@@ -11,6 +11,11 @@ private class CARADepositBasketQueueableTest {
 
 
     private static Contact buildContact() {
+        return buildContact('123 Main St', 'Dubai', '00000', 'AE');
+    }
+
+
+    private static Contact buildContact(String street, String city, String postalCode, String country) {
         Account acc = new Account(Name = 'Split Payment Test Customer');
         insert acc;
 
@@ -19,10 +24,10 @@ private class CARADepositBasketQueueableTest {
             FirstName = 'Jane',
             LastName = 'Doe',
             Email = 'shopper@example.com',
-            MailingStreet = '123 Main St',
-            MailingCity = 'Dubai',
-            MailingPostalCode = '00000',
-            MailingCountry = 'AE',
+            MailingStreet = street,
+            MailingCity = city,
+            MailingPostalCode = postalCode,
+            MailingCountry = country,
             Phone = '+971500000000'
         );
         insert contactRecord;
@@ -51,6 +56,16 @@ private class CARADepositBasketQueueableTest {
     }
 
 
+    /*
+     * Status__c is deliberately NOT 'Approved' here: the active
+     * CPR_Approved_Create_Deposit_Basket flow fires after-save on any
+     * create/update to that status and enqueues this exact same
+     * Queueable, which would double-enqueue it alongside this file's own
+     * explicit CARADepositBasketHandler.createDepositBaskets() call below
+     * — invisibly masked on success by the Basket_Status__c == 'Created'
+     * idempotency guard, but not on a failure path, where it doubles the
+     * callout/retry counts these tests assert on.
+     */
     private static Custom_Product_Request__c buildRequest(Id caseId, Id productId, Decimal price) {
         Custom_Product_Request__c requestRecord = new Custom_Product_Request__c(
             Case__c = caseId,
@@ -58,7 +73,7 @@ private class CARADepositBasketQueueableTest {
             Product__c = productId,
             Quantity__c = 1,
             Selling_Price__c = price,
-            Status__c = 'Approved'
+            Status__c = 'Under Review'
         );
         insert requestRecord;
         return requestRecord;
@@ -67,8 +82,7 @@ private class CARADepositBasketQueueableTest {
 
     private static Custom_Product_Request__c queryRequest(Id requestId) {
         return [
-            SELECT Status__c, Basket_Id__c, Deposit_Link__c, Deposit_Amount__c,
-                Order_Total__c, Basket_Status__c, Basket_Log__c
+            SELECT Name, Status__c, Basket_Id__c, Deposit_Link__c, Deposit_Amount__c, Order_Total__c, Basket_Status__c, Basket_Log__c
             FROM Custom_Product_Request__c
             WHERE Id = :requestId
         ];
@@ -96,8 +110,8 @@ private class CARADepositBasketQueueableTest {
         System.assertEquals('/pay/deposit?basketId=BASKET-1', result.Deposit_Link__c);
         System.assertEquals(250, result.Deposit_Amount__c);
         System.assertEquals(1000, result.Order_Total__c);
-        System.assertEquals('Approved', result.Status__c, 'A successful basket request must remain Approved.');
         System.assertEquals('Created', result.Basket_Status__c);
+        System.assertEquals('Under Review', result.Status__c, 'Success must not change Status__c.');
         System.assert(result.Basket_Log__c.contains('Deposit basket created'));
         System.assert(result.Basket_Log__c.contains('notification: Sent to shopper@example.com'));
         System.assertEquals(1, mock.capturedRequests.size());
@@ -107,6 +121,11 @@ private class CARADepositBasketQueueableTest {
         System.assertEquals('SKU_ID', payload.get('sku'));
         System.assertEquals(1000, (Decimal) payload.get('price'));
         System.assertEquals(250, (Decimal) payload.get('deposit'));
+        System.assertEquals(
+            result.Name,
+            payload.get('cprNumber'),
+            'The CPR Number must be sent to SFCC on the deposit basket call so it can be echoed back on the resulting order.'
+        );
     }
 
 
@@ -125,9 +144,167 @@ private class CARADepositBasketQueueableTest {
 
         System.assertEquals(0, mock.capturedRequests.size(), 'Missing SKU must block the callout entirely.');
         Custom_Product_Request__c result = queryRequest(requestRecord.Id);
-        System.assertEquals('Under Review', result.Status__c, 'A validation failure must undo the premature approval.');
         System.assertEquals('Error', result.Basket_Status__c);
+        System.assertEquals('Failed', result.Status__c, 'A failed deposit basket request must become Failed, never stay Approved.');
         System.assert(result.Basket_Log__c.contains('Product SKU'));
+    }
+
+
+    @IsTest
+    static void missingProductBlocksCalloutAndMarksError() {
+        Contact contactRecord = buildContact();
+        Case caseRecord = buildCase(contactRecord.Id);
+        Custom_Product_Request__c requestRecord = buildRequest(caseRecord.Id, null, 1000);
+
+        DepositMock mock = new DepositMock();
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        CARADepositBasketHandler.createDepositBaskets(new List<Id>{ requestRecord.Id });
+        Test.stopTest();
+
+        System.assertEquals(0, mock.capturedRequests.size(), 'Missing Product must block the callout entirely.');
+        Custom_Product_Request__c result = queryRequest(requestRecord.Id);
+        System.assertEquals('Error', result.Basket_Status__c);
+        System.assertEquals('Failed', result.Status__c, 'A failed deposit basket request must become Failed, never stay Approved.');
+        System.assert(result.Basket_Log__c.contains('Product'));
+    }
+
+
+    @IsTest
+    static void missingSellingPriceBlocksCalloutAndMarksError() {
+        Contact contactRecord = buildContact();
+        Case caseRecord = buildCase(contactRecord.Id);
+        Product2 productRecord = buildProduct();
+        Custom_Product_Request__c requestRecord = buildRequest(caseRecord.Id, productRecord.Id, null);
+
+        DepositMock mock = new DepositMock();
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        CARADepositBasketHandler.createDepositBaskets(new List<Id>{ requestRecord.Id });
+        Test.stopTest();
+
+        System.assertEquals(0, mock.capturedRequests.size(), 'Missing Selling Price must block the callout entirely.');
+        Custom_Product_Request__c result = queryRequest(requestRecord.Id);
+        System.assertEquals('Error', result.Basket_Status__c);
+        System.assertEquals('Failed', result.Status__c, 'A failed deposit basket request must become Failed, never stay Approved.');
+        System.assert(result.Basket_Log__c.contains('Selling Price'));
+    }
+
+
+    @IsTest
+    static void missingMailingAddressBlocksCalloutAndMarksError() {
+        Contact contactRecord = buildContact(null, null, null, 'AE');
+        Case caseRecord = buildCase(contactRecord.Id);
+        Product2 productRecord = buildProduct();
+        Custom_Product_Request__c requestRecord = buildRequest(caseRecord.Id, productRecord.Id, 1000);
+
+        DepositMock mock = new DepositMock();
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        CARADepositBasketHandler.createDepositBaskets(new List<Id>{ requestRecord.Id });
+        Test.stopTest();
+
+        System.assertEquals(0, mock.capturedRequests.size(), 'Missing Mailing Address must block the callout entirely.');
+        Custom_Product_Request__c result = queryRequest(requestRecord.Id);
+        System.assertEquals('Error', result.Basket_Status__c);
+        System.assertEquals('Failed', result.Status__c, 'A failed deposit basket request must become Failed, never stay Approved.');
+        System.assert(result.Basket_Log__c.contains('Mailing Address'));
+    }
+
+
+    @IsTest
+    static void blankPostalCodeAllowedForCountryWithoutPostalCodes() {
+        Contact contactRecord = buildContact('2442 N University Dr', 'Ruwais', null, 'AE');
+        Case caseRecord = buildCase(contactRecord.Id);
+        Product2 productRecord = buildProduct();
+        Custom_Product_Request__c requestRecord = buildRequest(caseRecord.Id, productRecord.Id, 1000);
+
+        DepositMock mock = new DepositMock();
+        mock.statusCode = 200;
+        mock.body = '{"basketId":"BASKET-AE","link":"/pay/deposit?basketId=BASKET-AE","deposit":250,"orderTotal":1000}';
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        CARADepositBasketHandler.createDepositBaskets(new List<Id>{ requestRecord.Id });
+        Test.stopTest();
+
+        System.assertEquals(1, mock.capturedRequests.size(), 'A UAE address without a postal code must not block the callout.');
+        Custom_Product_Request__c result = queryRequest(requestRecord.Id);
+        System.assertEquals('Created', result.Basket_Status__c);
+
+        Map<String, Object> payload = (Map<String, Object>) JSON.deserializeUntyped(mock.capturedRequests[0].getBody());
+        Map<String, Object> shippingAddress = (Map<String, Object>) payload.get('shippingAddress');
+        System.assertEquals(CARADepositBasketQueueable.NO_POSTAL_CODE_PLACEHOLDER, shippingAddress.get('postalCode'));
+        System.assertEquals('AE', shippingAddress.get('countryCode'));
+    }
+
+
+    @IsTest
+    static void blankPostalCodeBlocksCalloutForCountryWithPostalCodes() {
+        Contact contactRecord = buildContact('10 Downing St', 'London', null, 'GB');
+        Case caseRecord = buildCase(contactRecord.Id);
+        Product2 productRecord = buildProduct();
+        Custom_Product_Request__c requestRecord = buildRequest(caseRecord.Id, productRecord.Id, 1000);
+
+        DepositMock mock = new DepositMock();
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        CARADepositBasketHandler.createDepositBaskets(new List<Id>{ requestRecord.Id });
+        Test.stopTest();
+
+        System.assertEquals(0, mock.capturedRequests.size(), 'A GB address without a postal code must block the callout.');
+        Custom_Product_Request__c result = queryRequest(requestRecord.Id);
+        System.assert(result.Basket_Log__c.contains('Mailing Address'));
+    }
+
+
+    @IsTest
+    static void invalidCountryCodeBlocksCalloutAndMarksError() {
+        Contact contactRecord = buildContact('123 Main St', 'Dubai', '00000', 'Neverland');
+        Case caseRecord = buildCase(contactRecord.Id);
+        Product2 productRecord = buildProduct();
+        Custom_Product_Request__c requestRecord = buildRequest(caseRecord.Id, productRecord.Id, 1000);
+
+        DepositMock mock = new DepositMock();
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        CARADepositBasketHandler.createDepositBaskets(new List<Id>{ requestRecord.Id });
+        Test.stopTest();
+
+        System.assertEquals(0, mock.capturedRequests.size(), 'Unresolvable country must block the callout entirely.');
+        Custom_Product_Request__c result = queryRequest(requestRecord.Id);
+        System.assertEquals('Error', result.Basket_Status__c);
+        System.assertEquals('Failed', result.Status__c, 'A failed deposit basket request must become Failed, never stay Approved.');
+        System.assert(result.Basket_Log__c.contains('Mailing Address Country Code'));
+    }
+
+
+    @IsTest
+    static void multipleMissingFieldsReportAllApplicableErrors() {
+        Contact contactRecord = buildContact(null, null, null, null);
+        Case caseRecord = buildCase(contactRecord.Id);
+        Custom_Product_Request__c requestRecord = buildRequest(caseRecord.Id, null, null);
+
+        DepositMock mock = new DepositMock();
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        CARADepositBasketHandler.createDepositBaskets(new List<Id>{ requestRecord.Id });
+        Test.stopTest();
+
+        System.assertEquals(0, mock.capturedRequests.size(), 'Any missing required field must block the callout.');
+        Custom_Product_Request__c result = queryRequest(requestRecord.Id);
+        System.assertEquals('Error', result.Basket_Status__c);
+        System.assertEquals('Failed', result.Status__c, 'A failed deposit basket request must become Failed, never stay Approved.');
+        System.assert(result.Basket_Log__c.contains('Selling Price'), 'Expected Selling Price error: ' + result.Basket_Log__c);
+        System.assert(result.Basket_Log__c.contains('Product'), 'Expected Product error: ' + result.Basket_Log__c);
+        System.assert(result.Basket_Log__c.contains('Mailing Address'), 'Expected Mailing Address error: ' + result.Basket_Log__c);
+        System.assert(result.Basket_Log__c.contains('Mailing Address Country Code'), 'Expected Country Code error: ' + result.Basket_Log__c);
     }
 
 
@@ -153,6 +330,29 @@ private class CARADepositBasketQueueableTest {
 
 
     @IsTest
+    static void existingBasketStillFailsWhenProductClearedBeforeReapproval() {
+        Contact contactRecord = buildContact();
+        Case caseRecord = buildCase(contactRecord.Id);
+        Custom_Product_Request__c requestRecord = buildRequest(caseRecord.Id, null, 1000);
+        requestRecord.Basket_Id__c = 'EXISTING-BASKET';
+        requestRecord.Basket_Status__c = 'Created';
+        update requestRecord;
+
+        DepositMock mock = new DepositMock();
+        Test.setMock(HttpCalloutMock.class, mock);
+
+        Test.startTest();
+        CARADepositBasketHandler.createDepositBaskets(new List<Id>{ requestRecord.Id });
+        Test.stopTest();
+
+        System.assertEquals(0, mock.capturedRequests.size());
+        Custom_Product_Request__c result = queryRequest(requestRecord.Id);
+        System.assertEquals('Failed', result.Status__c, 'Validation must run before the idempotency guard.');
+        System.assert(result.Basket_Log__c.contains('Product'));
+    }
+
+
+    @IsTest
     static void gatewayErrorAfterRetryMarksErrorStatus() {
         Contact contactRecord = buildContact();
         Case caseRecord = buildCase(contactRecord.Id);
@@ -169,8 +369,8 @@ private class CARADepositBasketQueueableTest {
         Test.stopTest();
 
         Custom_Product_Request__c result = queryRequest(requestRecord.Id);
-        System.assertEquals('Under Review', result.Status__c, 'A gateway failure must return the CPR to review.');
         System.assertEquals('Error', result.Basket_Status__c);
+        System.assertEquals('Failed', result.Status__c, 'A failed deposit basket request must become Failed, never stay Approved.');
         System.assert(result.Basket_Log__c.contains(CARASfscSplitPaymentService.ERROR_GATEWAY));
         System.assertEquals(2, mock.capturedRequests.size(), 'A 502 gets exactly one retry.');
     }
@@ -193,8 +393,8 @@ private class CARADepositBasketQueueableTest {
         Test.stopTest();
 
         Custom_Product_Request__c result = queryRequest(requestRecord.Id);
-        System.assertEquals('Under Review', result.Status__c, 'An authentication failure must return the CPR to review.');
         System.assertEquals('Error', result.Basket_Status__c);
+        System.assertEquals('Failed', result.Status__c, 'A failed deposit basket request must become Failed, never stay Approved.');
         System.assert(result.Basket_Log__c.contains(CARASfscSplitPaymentService.ERROR_AUTH));
         System.assertEquals(1, mock.capturedRequests.size(), '401 must never be retried.');
     }

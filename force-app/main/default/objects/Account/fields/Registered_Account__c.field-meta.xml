@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Registered_Account__c</fullName>
+    <deleteConstraint>SetNull</deleteConstraint>
+    <description>Set by CARAOrderSyncService to link a Guest Account to the Registered Account for the same email once that person registers. Replaces standard ParentId for this link, which Salesforce disallows once the Registered Account is a Person Account (&quot;Parent Account may not be a person account&quot;).</description>
+    <label>Registered Account</label>
+    <referenceTo>Account</referenceTo>
+    <relationshipLabel>Guest Accounts</relationshipLabel>
+    <relationshipName>Guest_Accounts</relationshipName>
+    <required>false</required>
+    <trackFeedHistory>false</trackFeedHistory>
+    <type>Lookup</type>
+</CustomField>

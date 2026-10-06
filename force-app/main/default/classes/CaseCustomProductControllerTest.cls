@@ -69,6 +69,7 @@ private class CaseCustomProductControllerTest {
                 Quantity__c = 1,
                 Size__c = '7',
                 Metal__c = 'Platinum',
+                Stone_Type__c = 'Diamond',
                 Diamond_Carat__c = 1.25,
                 Diamond_Shape__c = 'Round',
                 Diamond_Type__c = 'Natural',
@@ -79,6 +80,7 @@ private class CaseCustomProductControllerTest {
 
         Assert.areEqual('7', created.Size__c);
         Assert.areEqual('Platinum', created.Metal__c);
+        Assert.areEqual('Diamond', created.Stone_Type__c);
         Assert.areEqual(1.25, created.Diamond_Carat__c);
         Assert.areEqual('Round', created.Diamond_Shape__c);
         Assert.areEqual('Natural', created.Diamond_Type__c);
@@ -86,10 +88,12 @@ private class CaseCustomProductControllerTest {
 
         created.Size__c = '7.5';
         created.Metal__c = 'Yellow Gold';
+        created.Stone_Type__c = 'Emerald';
         Custom_Product_Request__c updated = CaseCustomProductController.updateRequest(created);
 
         Assert.areEqual('7.5', updated.Size__c);
         Assert.areEqual('Yellow Gold', updated.Metal__c);
+        Assert.areEqual('Emerald', updated.Stone_Type__c);
     }
 
     @IsTest

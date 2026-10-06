@@ -24,4 +24,10 @@ private class CARASplitPaymentSettingsTest {
         System.assert(codes.contains(502));
         System.assertEquals(1, codes.size());
     }
+
+
+    @IsTest
+    static void getStorefrontBaseUriReturnsConfiguredValue() {
+        System.assertEquals('https://sfccstg.carajewellers.com/en-ae', CARASplitPaymentSettings.getStorefrontBaseUri());
+    }
 }
