@@ -141,6 +141,14 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>CARADepositBasketPreflight</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>CARADepositBasketPreflightTest</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>CARADepositBasketQueueable</apexClass>
         <enabled>true</enabled>
     </classAccesses>
@@ -269,6 +277,10 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>CARAPersonAccountUtil</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>CARASfscOrderOpsService</apexClass>
         <enabled>true</enabled>
     </classAccesses>
@@ -313,6 +325,14 @@
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
+        <apexClass>CPRActivityHistoryController</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>CPRActivityHistoryControllerTest</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
         <apexClass>CaseChatController</apexClass>
         <enabled>true</enabled>
     </classAccesses>
@@ -330,6 +350,14 @@
     </classAccesses>
     <classAccesses>
         <apexClass>CaseCustomer360Controller</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>CaseCustomerMatchService</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>CaseCustomerMatchTriggerTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
@@ -470,6 +498,10 @@
     </classAccesses>
     <classAccesses>
         <apexClass>PasswordResetInputTest</apexClass>
+        <enabled>true</enabled>
+    </classAccesses>
+    <classAccesses>
+        <apexClass>Product2SkuDefaultTriggerTest</apexClass>
         <enabled>true</enabled>
     </classAccesses>
     <classAccesses>
